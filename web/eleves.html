@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Élèves</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--amber:#F5A623;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--red:#DC2626;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:1100px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+input:focus,select:focus{border-color:var(--navy);}
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--border);background:#fafbff;}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid #f0f2f8;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafbff;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Gestion des élèves</h2>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="search" placeholder="Rechercher…" oninput="filtrer()" style="width:200px;">
+      <select id="filtre-classe" onchange="filtrer()"><option value="">Toutes les classes</option></select>
+      <button class="btn" onclick="ouvrirModal()">+ Ajouter un élève</button>
+    </div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Prénom Nom</th><th>Classe</th><th>Matricule</th><th>Date naissance</th><th>Actions</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal ajout/édition -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Ajouter un élève</h3>
+    <input type="hidden" id="eleve-id">
+    <div class="form-row"><label>Prénom *</label><input id="f-prenom"></div>
+    <div class="form-row"><label>Nom *</label><input id="f-nom"></div>
+    <div class="form-row"><label>Classe</label><select id="f-classe"><option value="">— Sans classe —</option></select></div>
+    <div class="form-row"><label>Matricule</label><input id="f-matricule"></div>
+    <div class="form-row"><label>Date de naissance</label><input type="date" id="f-naissance"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="sauvegarder()">Enregistrer</button>
+      <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="eleves.html"]')?.classList.add('active');});
+
+let tousEleves = [], classes = [];
+
+async function charger() {
+  try {
+    const [de, dc] = await Promise.all([apiGet('/eleves',{par_page:200}), apiGet('/classes')]);
+    tousEleves = de.items || [];
+    classes = dc.classes || [];
+    // Peupler les selects
+    ['filtre-classe','f-classe'].forEach(id=>{
+      const sel = document.getElementById(id);
+      const isFiltre = id === 'filtre-classe';
+      sel.innerHTML = isFiltre ? '<option value="">Toutes les classes</option>' : '<option value="">— Sans classe —</option>';
+      classes.forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.nom}</option>`);
+    });
+    afficher(tousEleves);
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function filtrer() {
+  const q  = document.getElementById('search').value.toLowerCase();
+  const cl = document.getElementById('filtre-classe').value;
+  afficher(tousEleves.filter(e=>{
+    const nom = (e.prenom+' '+e.nom).toLowerCase();
+    const ok_nom = !q || nom.includes(q);
+    const ok_cl  = !cl || String(e.classe_id) === cl;
+    return ok_nom && ok_cl;
+  }));
+}
+
+function afficher(list) {
+  document.getElementById('tbody').innerHTML = list.length ? list.map(e=>`
+    <tr>
+      <td style="font-weight:600;color:var(--navy)">${e.prenom} ${e.nom}</td>
+      <td>${e.classe_nom||'—'}</td>
+      <td>${e.matricule||'—'}</td>
+      <td>${e.date_naissance?formatDate(e.date_naissance):'—'}</td>
+      <td><button class="btn btn-sm" onclick='editer(${JSON.stringify(e)})'>Modifier</button></td>
+    </tr>`).join('')
+  : '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">Aucun élève trouvé.</td></tr>';
+}
+
+function ouvrirModal(e=null) {
+  document.getElementById('modal-title').textContent = e ? 'Modifier l\'élève' : 'Ajouter un élève';
+  document.getElementById('eleve-id').value   = e?.id   || '';
+  document.getElementById('f-prenom').value   = e?.prenom || '';
+  document.getElementById('f-nom').value      = e?.nom || '';
+  document.getElementById('f-matricule').value= e?.matricule || '';
+  document.getElementById('f-naissance').value= e?.date_naissance || '';
+  document.getElementById('f-classe').value   = e?.classe_id || '';
+  document.getElementById('modal').classList.add('open');
+}
+function editer(e) { ouvrirModal(e); }
+function fermerModal() { document.getElementById('modal').classList.remove('open'); }
+
+async function sauvegarder() {
+  const id     = document.getElementById('eleve-id').value;
+  const prenom = document.getElementById('f-prenom').value.trim();
+  const nom    = document.getElementById('f-nom').value.trim();
+  if (!prenom || !nom) { showAlert('Prénom et nom requis.','error'); return; }
+  const corps = {
+    prenom, nom,
+    matricule:      document.getElementById('f-matricule').value.trim() || null,
+    date_naissance: document.getElementById('f-naissance').value || null,
+    classe_id:      document.getElementById('f-classe').value || null,
+  };
+  try {
+    if (id) await apiPut('/eleves/'+id, corps);
+    else    await apiPost('/eleves', corps);
+    fermerModal();
+    showAlert('Élève enregistré.','success');
+    charger();
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+charger();
+</script>
+</body>
+</html>

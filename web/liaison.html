@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Cahier de liaison</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--amber:#F5A623;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--blue:#2563EB;--purple:#7C3AED;--orange:#F97316;--red:#DC2626;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:1000px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select,textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+input:focus,select:focus,textarea:focus{border-color:var(--navy);}
+.msg-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px;}
+.msg-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.msg-title{font-weight:700;color:var(--navy);font-size:15px;}
+.msg-body{color:var(--body);font-size:14px;line-height:1.5;}
+.msg-meta{font-size:12px;color:var(--muted);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;}
+.cat-badge{padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select,.form-row textarea{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Cahier de liaison</h2>
+    <button class="btn" onclick="ouvrirModal()">+ Nouveau message</button>
+  </div>
+  <div id="messages-list"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Nouveau message de liaison</h3>
+    <div class="form-row">
+      <label>Catégorie</label>
+      <select id="f-cat">
+        <option value="info">Information</option>
+        <option value="devoir">Devoir</option>
+        <option value="autorisation">Autorisation</option>
+        <option value="retard">Retard</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Classe destinataire (vide = toutes)</label><select id="f-classe"><option value="">— Toutes les classes —</option></select></div>
+    <div class="form-row"><label>Titre</label><input id="f-titre" placeholder="Optionnel"></div>
+    <div class="form-row"><label>Contenu *</label><textarea id="f-contenu" rows="5" placeholder="Rédigez votre message…"></textarea></div>
+    <div class="form-row" style="display:flex;align-items:center;gap:10px;">
+      <input type="checkbox" id="f-ack" style="width:auto;padding:0;">
+      <label for="f-ack" style="margin:0;cursor:pointer;">Demander un accusé de réception</label>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="envoyer()">Publier</button>
+      <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="liaison.html"]')?.classList.add('active');});
+
+const catColors={info:'#2563EB',devoir:'#7C3AED',autorisation:'#059669',retard:'#F97316',autre:'#8E99B4'};
+const catLabels={info:'Info',devoir:'Devoir',autorisation:'Autorisation',retard:'Retard',autre:'Autre'};
+
+async function charger() {
+  try {
+    const [dm, dc] = await Promise.all([apiGet('/liaison',{page:1}), apiGet('/classes')]);
+    const sel = document.getElementById('f-classe');
+    sel.innerHTML = '<option value="">— Toutes les classes —</option>';
+    (dc.classes||[]).forEach(c=>sel.innerHTML+=`<option value="${c.id}">${c.nom}</option>`);
+
+    const list = document.getElementById('messages-list');
+    const msgs = dm.items||[];
+    list.innerHTML = msgs.length ? msgs.map(m=>{
+      const c = catColors[m.categorie]||'#8E99B4';
+      return `<div class="msg-card">
+        <div class="msg-header">
+          <div>
+            <span class="cat-badge" style="background:${c}22;color:${c}">${catLabels[m.categorie]||m.categorie}</span>
+            ${m.titre?`<div class="msg-title" style="margin-top:6px">${m.titre}</div>`:''}
+          </div>
+          <span style="font-size:12px;color:var(--muted);white-space:nowrap">${formatDate(m.created_at)}</span>
+        </div>
+        <div class="msg-body">${m.contenu}</div>
+        <div class="msg-meta">
+          <span>✍️ ${m.auteur_prenom||''} ${m.auteur_nom||''}</span>
+          ${m.classe_nom?`<span>📚 ${m.classe_nom}</span>`:'<span>📚 Toutes classes</span>'}
+          ${m.necessite_ack?'<span>✅ Accusé requis</span>':''}
+        </div>
+      </div>`;
+    }).join('')
+    : '<p style="text-align:center;color:var(--muted);padding:40px">Aucun message publié.</p>';
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function ouvrirModal(){ document.getElementById('modal').classList.add('open'); }
+function fermerModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function envoyer() {
+  const contenu = document.getElementById('f-contenu').value.trim();
+  if (!contenu){ showAlert('Le contenu est requis.','error'); return; }
+  const corps = {
+    categorie:    document.getElementById('f-cat').value,
+    classe_id:    document.getElementById('f-classe').value || null,
+    titre:        document.getElementById('f-titre').value.trim() || null,
+    contenu,
+    necessite_ack: document.getElementById('f-ack').checked,
+  };
+  try {
+    await apiPost('/liaison', corps);
+    fermerModal(); showAlert('Message publié.'); charger();
+    document.getElementById('f-contenu').value='';
+    document.getElementById('f-titre').value='';
+    document.getElementById('f-ack').checked=false;
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+charger();
+</script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Classes</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:900px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+input:focus,select:focus{border-color:var(--navy);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+.class-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.class-card h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.class-card p{font-size:13px;color:var(--muted);}
+.class-card .actions{display:flex;gap:8px;margin-top:14px;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:450px;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Gestion des classes</h2>
+    <button class="btn" onclick="ouvrirModal()">+ Nouvelle classe</button>
+  </div>
+  <div class="grid" id="classes-grid"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Nouvelle classe</h3>
+    <input type="hidden" id="classe-id">
+    <div class="form-row"><label>Nom de la classe *</label><input id="f-nom" placeholder="ex: CE1 A"></div>
+    <div class="form-row"><label>Niveau</label><input id="f-niveau" placeholder="ex: CE1"></div>
+    <div class="form-row"><label>Année scolaire</label><input id="f-annee" placeholder="ex: 2025-2026"></div>
+    <div class="form-row"><label>Enseignant principal</label><select id="f-ens"><option value="">— Aucun —</option></select></div>
+    <div class="form-actions">
+      <button class="btn" onclick="sauvegarder()">Enregistrer</button>
+      <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="classes.html"]')?.classList.add('active');});
+
+async function charger() {
+  try {
+    const [dc, du] = await Promise.all([apiGet('/classes'), apiGet('/utilisateurs',{role:'teacher'})]);
+    const classes      = dc.classes || [];
+    const enseignants  = du.items   || [];
+    const sel = document.getElementById('f-ens');
+    sel.innerHTML = '<option value="">— Aucun —</option>';
+    enseignants.forEach(u=>sel.innerHTML+=`<option value="${u.id}">${u.prenom} ${u.nom}</option>`);
+
+    const grid = document.getElementById('classes-grid');
+    grid.innerHTML = classes.length ? classes.map(c=>`
+      <div class="class-card">
+        <h3>${c.nom}</h3>
+        <p>${c.niveau||'—'} · ${c.annee_scolaire||'—'}</p>
+        <p style="margin-top:4px">👩‍🏫 ${c.ens_prenom?c.ens_prenom+' '+c.ens_nom:'Sans enseignant'}</p>
+        <p style="margin-top:4px">👨‍🎓 ${c.nb_eleves} élève(s)</p>
+        <div class="actions">
+          <button class="btn btn-sm" onclick='editer(${JSON.stringify(c)})'>Modifier</button>
+        </div>
+      </div>`).join('')
+    : '<p style="color:var(--muted)">Aucune classe créée.</p>';
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function ouvrirModal(c=null) {
+  document.getElementById('modal-title').textContent = c ? 'Modifier la classe' : 'Nouvelle classe';
+  document.getElementById('classe-id').value = c?.id   || '';
+  document.getElementById('f-nom').value     = c?.nom  || '';
+  document.getElementById('f-niveau').value  = c?.niveau || '';
+  document.getElementById('f-annee').value   = c?.annee_scolaire || '';
+  document.getElementById('f-ens').value     = c?.enseignant_id || '';
+  document.getElementById('modal').classList.add('open');
+}
+function editer(c){ ouvrirModal(c); }
+function fermerModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function sauvegarder() {
+  const id  = document.getElementById('classe-id').value;
+  const nom = document.getElementById('f-nom').value.trim();
+  if (!nom){ showAlert('Le nom est requis.','error'); return; }
+  const corps = { nom, niveau:document.getElementById('f-niveau').value.trim()||null, annee_scolaire:document.getElementById('f-annee').value.trim()||null, enseignant_id:document.getElementById('f-ens').value||null };
+  try {
+    if(id) await apiPut('/classes/'+id, corps);
+    else   await apiPost('/classes', corps);
+    fermerModal(); showAlert('Classe enregistrée.'); charger();
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+charger();
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Paramètres</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:800px;margin:0 auto;padding:28px 20px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:24px;}
+.section{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px;}
+.section h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:6px;}
+.form-row input,.form-row select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+.form-row input:focus,.form-row select:focus{border-color:var(--navy);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.btn{padding:11px 22px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:7px;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+.btn-red{background:#DC2626;}
+.matieres-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.matiere-chip{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:8px;}
+.matiere-chip button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;}
+.periodes-list li{list-style:none;padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:13px;}
+.periodes-list li:last-child{border-bottom:none;}
+.api-info{background:#f0f4ff;border:1px solid #c7d7ff;border-radius:10px;padding:14px;font-size:13px;color:var(--navy);}
+.api-info code{background:var(--navy);color:#fff;padding:2px 8px;border-radius:5px;font-size:12px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <h2>Paramètres</h2>
+
+  <!-- Infos école -->
+  <div class="section">
+    <h3>Informations de l'école</h3>
+    <div class="form-grid">
+      <div class="form-row"><label>Nom de l'école</label><input id="e-nom"></div>
+      <div class="form-row"><label>Ville</label><input id="e-ville"></div>
+      <div class="form-row"><label>Téléphone</label><input id="e-tel"></div>
+      <div class="form-row"><label>Email</label><input id="e-email" type="email"></div>
+    </div>
+    <div class="form-row"><label>Adresse</label><input id="e-adresse"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Année scolaire</label><input id="e-annee" placeholder="2025-2026"></div>
+      <div class="form-row"><label>Début scolarité</label><input type="date" id="e-debut"></div>
+      <div class="form-row"><label>Fin scolarité</label><input type="date" id="e-fin"></div>
+    </div>
+    <button class="btn" onclick="sauvegarderEcole()">Enregistrer</button>
+  </div>
+
+  <!-- Matières -->
+  <div class="section">
+    <h3>Matières enseignées</h3>
+    <div class="matieres-list" id="matieres-list"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <input id="m-nom" placeholder="Nom de la matière" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13px;flex:1;min-width:150px;outline:none;">
+      <input id="m-coeff" placeholder="Coeff." type="number" step="0.5" min="0.5" value="1" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13px;width:90px;outline:none;">
+      <button class="btn btn-sm" onclick="ajouterMatiere()">+ Ajouter</button>
+    </div>
+  </div>
+
+  <!-- Périodes -->
+  <div class="section">
+    <h3>Périodes d'évaluation</h3>
+    <ul class="periodes-list" id="periodes-list"></ul>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+      <input id="p-nom" placeholder="ex: 1er Trimestre" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13px;flex:1;min-width:150px;outline:none;">
+      <input id="p-debut" type="date" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13px;outline:none;">
+      <input id="p-fin" type="date" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:13px;outline:none;">
+      <button class="btn btn-sm" onclick="ajouterPeriode()">+ Ajouter</button>
+    </div>
+  </div>
+
+  <!-- Config API -->
+  <div class="section">
+    <h3>Configuration API</h3>
+    <div class="api-info" style="margin-bottom:14px">
+      <strong>URL de base de l'API :</strong><br>
+      <code id="api-url-display"></code>
+    </div>
+    <div class="form-row"><label>Modifier l'URL de l'API</label><input id="new-api-url" placeholder="https://votre-domaine.com/api"></div>
+    <button class="btn btn-sm" onclick="changerApiUrl()">Mettre à jour</button>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="parametres.html"]')?.classList.add('active');});
+
+document.getElementById('api-url-display').textContent=API;
+document.getElementById('new-api-url').value=API;
+
+async function init(){
+  try{
+    const [de,dm,dp]=await Promise.all([apiGet('/ecole'),apiGet('/matieres'),apiGet('/periodes')]);
+    const e=de.ecole||{};
+    document.getElementById('e-nom').value    =e.nom||'';
+    document.getElementById('e-ville').value  =e.ville||'';
+    document.getElementById('e-tel').value    =e.telephone||'';
+    document.getElementById('e-email').value  =e.email||'';
+    document.getElementById('e-adresse').value=e.adresse||'';
+    document.getElementById('e-annee').value  =e.annee_scolaire||'';
+    document.getElementById('e-debut').value  =e.date_debut_scolarite||'';
+    document.getElementById('e-fin').value    =e.date_fin_scolarite||'';
+    afficherMatieres(dm.matieres||[]);
+    afficherPeriodes(dp.periodes||[]);
+  }catch(er){showAlert(er.message,'error');}
+}
+
+function afficherMatieres(list){
+  document.getElementById('matieres-list').innerHTML=list.map(m=>`
+    <div class="matiere-chip">${m.nom} <span style="color:var(--muted);font-size:11px">×${m.coefficient}</span></div>
+  `).join('');
+}
+
+function afficherPeriodes(list){
+  document.getElementById('periodes-list').innerHTML=list.map(p=>`
+    <li>
+      <span style="font-weight:600;color:var(--navy)">${p.nom}</span>
+      <span style="color:var(--muted)">${p.date_debut?formatDate(p.date_debut)+' → '+formatDate(p.date_fin):''}</span>
+    </li>`).join('');
+}
+
+async function sauvegarderEcole(){
+  const corps={nom:document.getElementById('e-nom').value.trim(),ville:document.getElementById('e-ville').value.trim()||null,telephone:document.getElementById('e-tel').value.trim()||null,email:document.getElementById('e-email').value.trim()||null,adresse:document.getElementById('e-adresse').value.trim()||null,annee_scolaire:document.getElementById('e-annee').value.trim()||null,date_debut_scolarite:document.getElementById('e-debut').value||null,date_fin_scolarite:document.getElementById('e-fin').value||null};
+  try{await apiPut('/ecole',corps);showAlert('École mise à jour.');}
+  catch(e){showAlert(e.message,'error');}
+}
+
+async function ajouterMatiere(){
+  const nom=document.getElementById('m-nom').value.trim();
+  if(!nom){showAlert('Nom requis.','error');return;}
+  try{
+    await apiPost('/matieres',{nom,coefficient:parseFloat(document.getElementById('m-coeff').value)||1});
+    document.getElementById('m-nom').value='';showAlert('Matière ajoutée.');
+    const dm=await apiGet('/matieres');afficherMatieres(dm.matieres||[]);
+  }catch(e){showAlert(e.message,'error');}
+}
+
+async function ajouterPeriode(){
+  const nom=document.getElementById('p-nom').value.trim();
+  if(!nom){showAlert('Nom requis.','error');return;}
+  try{
+    await apiPost('/periodes',{nom,date_debut:document.getElementById('p-debut').value||null,date_fin:document.getElementById('p-fin').value||null});
+    document.getElementById('p-nom').value='';showAlert('Période ajoutée.');
+    const dp=await apiGet('/periodes');afficherPeriodes(dp.periodes||[]);
+  }catch(e){showAlert(e.message,'error');}
+}
+
+function changerApiUrl(){
+  const url=document.getElementById('new-api-url').value.trim();
+  if(!url)return;
+  localStorage.setItem('api_url',url);
+  showAlert('URL mise à jour. Rechargement…');
+  setTimeout(()=>window.location.reload(),1500);
+}
+
+init();
+</script>
+</body>
+</html>

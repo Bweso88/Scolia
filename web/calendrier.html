@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Calendrier</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--blue:#2563EB;--orange:#F97316;--red:#DC2626;--purple:#7C3AED;--amber:#F5A623;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:900px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select,textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+.ev-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:12px;display:flex;gap:16px;align-items:flex-start;}
+.ev-date{min-width:54px;height:54px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;}
+.ev-day{font-size:22px;line-height:1;}
+.ev-month{font-size:11px;text-transform:uppercase;}
+.ev-body h3{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.ev-body p{font-size:13px;color:var(--body);margin-bottom:4px;}
+.ev-meta{font-size:12px;color:var(--muted);}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select,.form-row textarea{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Calendrier des événements</h2>
+    <button class="btn" onclick="ouvrirModal()">+ Nouvel événement</button>
+  </div>
+  <div id="ev-list"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Nouvel événement</h3>
+    <div class="form-row"><label>Titre *</label><input id="f-titre" placeholder="Titre de l'événement"></div>
+    <div class="form-row">
+      <label>Type</label>
+      <select id="f-type">
+        <option value="reunion">Réunion</option><option value="sortie">Sortie</option>
+        <option value="vacances">Vacances</option><option value="fete">Fête</option>
+        <option value="examen">Examen</option><option value="autre">Autre</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-row"><label>Date *</label><input type="date" id="f-date"></div>
+      <div class="form-row"><label>Heure</label><input type="time" id="f-heure"></div>
+    </div>
+    <div class="form-row"><label>Lieu</label><input id="f-lieu"></div>
+    <div class="form-row"><label>Description</label><textarea id="f-desc" rows="3"></textarea></div>
+    <div class="form-actions">
+      <button class="btn" onclick="creer()">Créer</button>
+      <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="calendrier.html"]')?.classList.add('active');});
+
+const typeColors={reunion:'#2563EB',sortie:'#059669',vacances:'#F5A623',fete:'#7C3AED',examen:'#DC2626',autre:'#8E99B4'};
+const typeEmojis={reunion:'👥',sortie:'🚶',vacances:'🏖',fete:'🎉',examen:'✍️',autre:'📅'};
+const moisNoms=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+async function charger(){
+  try{
+    const data=await apiGet('/evenements');
+    const list=document.getElementById('ev-list');
+    const evs=data.evenements||[];
+    list.innerHTML=evs.length?evs.map(e=>{
+      const d=new Date(e.date_debut);
+      const c=typeColors[e.type]||'#8E99B4';
+      return `<div class="ev-card">
+        <div class="ev-date" style="background:${c}22;color:${c}">
+          <div class="ev-day">${d.getDate()}</div>
+          <div class="ev-month">${moisNoms[d.getMonth()]}</div>
+        </div>
+        <div class="ev-body" style="flex:1">
+          <h3>${typeEmojis[e.type]||'📅'} ${e.titre}</h3>
+          ${e.description?`<p>${e.description}</p>`:''}
+          <div class="ev-meta">
+            ${e.lieu?`📍 ${e.lieu} · `:''}
+            ${e.heure_debut?`🕐 ${e.heure_debut} · `:''}
+            Par ${e.auteur_prenom||''} ${e.auteur_nom||''}
+          </div>
+        </div>
+        <button onclick="supprimer(${e.id})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px">🗑</button>
+      </div>`;
+    }).join('')
+    :'<p style="text-align:center;color:var(--muted);padding:40px">Aucun événement.</p>';
+  }catch(e){showAlert(e.message,'error');}
+}
+
+function ouvrirModal(){
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modal').classList.add('open');
+}
+function fermerModal(){document.getElementById('modal').classList.remove('open');}
+
+async function creer(){
+  const titre=document.getElementById('f-titre').value.trim();
+  const date=document.getElementById('f-date').value;
+  if(!titre||!date){showAlert('Titre et date requis.','error');return;}
+  try{
+    await apiPost('/evenements',{titre,type:document.getElementById('f-type').value,date_debut:date,heure_debut:document.getElementById('f-heure').value||null,lieu:document.getElementById('f-lieu').value.trim()||null,description:document.getElementById('f-desc').value.trim()||null});
+    fermerModal();showAlert('Événement créé.');charger();
+  }catch(e){showAlert(e.message,'error');}
+}
+
+async function supprimer(id){
+  if(!confirm('Supprimer cet événement ?'))return;
+  try{await apiDelete('/evenements/'+id);showAlert('Événement supprimé.');charger();}
+  catch(e){showAlert(e.message,'error');}
+}
+
+charger();
+</script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Remarques</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--red:#DC2626;--blue:#2563EB;--orange:#F97316;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:1000px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select,textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+input:focus,select:focus,textarea:focus{border-color:var(--navy);}
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--border);background:#fafbff;}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid #f0f2f8;vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+.prio-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select,.form-row textarea{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Remarques pédagogiques</h2>
+    <button class="btn" onclick="ouvrirModal()">+ Nouvelle remarque</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Élève</th><th>Catégorie</th><th>Priorité</th><th>Message</th><th>Par</th><th>Date</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Nouvelle remarque</h3>
+    <div class="form-row"><label>Élève *</label><select id="f-eleve"><option value="">— Choisir —</option></select></div>
+    <div class="form-row">
+      <label>Catégorie</label>
+      <select id="f-cat">
+        <option value="felicitation">Félicitation</option>
+        <option value="comportement">Comportement</option>
+        <option value="absence">Absence</option>
+        <option value="retard">Retard</option>
+        <option value="sante">Santé</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Priorité</label>
+      <select id="f-prio">
+        <option value="info">Information</option>
+        <option value="avertissement">Avertissement</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Message *</label><textarea id="f-msg" rows="4"></textarea></div>
+    <div class="form-actions">
+      <button class="btn" onclick="envoyer()">Envoyer</button>
+      <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="remarques.html"]')?.classList.add('active');});
+
+const prioColors={info:'#2563EB',avertissement:'#F97316',urgent:'#DC2626'};
+const prioLabels={info:'Info',avertissement:'Avertissement',urgent:'Urgent'};
+const catLabels={felicitation:'🌟 Félicitation',comportement:'⚠️ Comportement',absence:'❌ Absence',retard:'🕐 Retard',sante:'🏥 Santé',autre:'📝 Autre'};
+
+async function charger() {
+  try {
+    const [dr, de] = await Promise.all([apiGet('/remarques',{page:1}), apiGet('/eleves',{par_page:200})]);
+    const eleves = de.items||[];
+    const sel = document.getElementById('f-eleve');
+    sel.innerHTML='<option value="">— Choisir —</option>';
+    eleves.forEach(e=>sel.innerHTML+=`<option value="${e.id}">${e.prenom} ${e.nom}</option>`);
+
+    const tbody=document.getElementById('tbody');
+    const list=dr.items||[];
+    tbody.innerHTML=list.length?list.map(r=>{
+      const c=prioColors[r.priorite]||'#8E99B4';
+      return `<tr>
+        <td style="font-weight:600;color:var(--navy)">${r.eleve_prenom||''} ${r.eleve_nom||''}</td>
+        <td>${catLabels[r.categorie]||r.categorie}</td>
+        <td><span class="prio-badge" style="background:${c}22;color:${c}">${prioLabels[r.priorite]||r.priorite}</span></td>
+        <td style="max-width:300px">${r.message}</td>
+        <td style="color:var(--muted)">${r.auteur_prenom||''} ${r.auteur_nom||''}</td>
+        <td style="color:var(--muted);white-space:nowrap">${formatDate(r.created_at)}</td>
+      </tr>`;
+    }).join('')
+    :'<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">Aucune remarque.</td></tr>';
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function ouvrirModal(){ document.getElementById('modal').classList.add('open'); }
+function fermerModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function envoyer() {
+  const eleve_id=document.getElementById('f-eleve').value;
+  const message=document.getElementById('f-msg').value.trim();
+  if(!eleve_id||!message){showAlert('Élève et message requis.','error');return;}
+  try {
+    await apiPost('/remarques',{eleve_id:parseInt(eleve_id),categorie:document.getElementById('f-cat').value,priorite:document.getElementById('f-prio').value,message});
+    fermerModal();showAlert('Remarque envoyée.');charger();
+    document.getElementById('f-msg').value='';
+  } catch(e){showAlert(e.message,'error');}
+}
+
+charger();
+</script>
+</body>
+</html>

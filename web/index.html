@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scolia — Connexion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#0D1B3E;--amber:#F5A623;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--red:#DC2626;--blue:#2563EB;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--navy);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .card{background:var(--white);border-radius:20px;padding:40px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:32px;}
+  .logo-icon{width:48px;height:48px;background:var(--amber);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .logo-text{font-size:24px;font-weight:800;color:var(--navy);}
+  h1{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+  p{color:var(--muted);font-size:14px;margin-bottom:28px;}
+  .form-group{margin-bottom:16px;}
+  label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:6px;}
+  input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:15px;color:var(--navy);outline:none;transition:.2s;}
+  input:focus{border-color:var(--navy);}
+  .btn{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;margin-top:8px;}
+  .btn:hover{background:#1a3060;}
+  .btn:disabled{opacity:.6;cursor:not-allowed;}
+  .step{display:none;}
+  .step.active{display:block;}
+  .otp-row{display:flex;gap:10px;justify-content:center;margin-bottom:20px;}
+  .otp-input{width:46px;height:52px;text-align:center;font-size:22px;font-weight:700;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;color:var(--navy);outline:none;}
+  .otp-input:focus{border-color:var(--navy);}
+  .error{color:var(--red);font-size:13px;margin-top:8px;display:none;}
+  .back{color:var(--muted);font-size:13px;cursor:pointer;text-align:center;margin-top:16px;}
+  .back:hover{color:var(--navy);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🏫</div>
+    <span class="logo-text">Scolia</span>
+  </div>
+
+  <!-- Étape 1 : téléphone -->
+  <div class="step active" id="step-tel">
+    <h1>Connexion</h1>
+    <p>Entrez votre numéro de téléphone pour recevoir un code SMS.</p>
+    <div class="form-group">
+      <label>Numéro de téléphone</label>
+      <input type="tel" id="tel" placeholder="+242060000000" value="+242">
+    </div>
+    <div class="form-group">
+      <label>Code école</label>
+      <input type="text" id="ecole-slug" placeholder="ecole-exemple">
+    </div>
+    <button class="btn" id="btn-otp">Recevoir le code SMS</button>
+    <div class="error" id="err-tel"></div>
+  </div>
+
+  <!-- Étape 2 : OTP -->
+  <div class="step" id="step-otp">
+    <h1>Code de vérification</h1>
+    <p id="otp-subtitle">Code envoyé au numéro indiqué.</p>
+    <div class="otp-row">
+      <input class="otp-input" maxlength="1" id="o0" inputmode="numeric">
+      <input class="otp-input" maxlength="1" id="o1" inputmode="numeric">
+      <input class="otp-input" maxlength="1" id="o2" inputmode="numeric">
+      <input class="otp-input" maxlength="1" id="o3" inputmode="numeric">
+      <input class="otp-input" maxlength="1" id="o4" inputmode="numeric">
+      <input class="otp-input" maxlength="1" id="o5" inputmode="numeric">
+    </div>
+    <button class="btn" id="btn-verify">Valider</button>
+    <div class="error" id="err-otp"></div>
+    <div class="back" onclick="retourTel()">← Modifier le numéro</div>
+  </div>
+</div>
+
+<script>
+const API = localStorage.getItem('api_url') || 'https://votre-domaine.com/api';
+
+function showErr(id, msg){ const el=document.getElementById(id); el.textContent=msg; el.style.display='block'; }
+function hideErr(id){ document.getElementById(id).style.display='none'; }
+
+document.getElementById('btn-otp').onclick = async () => {
+  hideErr('err-tel');
+  const tel  = document.getElementById('tel').value.trim();
+  const slug = document.getElementById('ecole-slug').value.trim();
+  if(!tel || !slug){ showErr('err-tel','Remplissez tous les champs.'); return; }
+  document.getElementById('btn-otp').disabled = true;
+  document.getElementById('btn-otp').textContent = 'Envoi…';
+  try {
+    const r = await fetch(API+'/auth/demander-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telephone:tel,ecole_slug:slug})});
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.erreur||'Erreur');
+    localStorage.setItem('tel_auth', tel);
+    localStorage.setItem('slug_auth', slug);
+    document.getElementById('otp-subtitle').textContent = 'Code envoyé au '+tel;
+    document.getElementById('step-tel').classList.remove('active');
+    document.getElementById('step-otp').classList.add('active');
+    document.getElementById('o0').focus();
+  } catch(e){ showErr('err-tel', e.message); }
+  finally { document.getElementById('btn-otp').disabled=false; document.getElementById('btn-otp').textContent='Recevoir le code SMS'; }
+};
+
+// Navigation OTP
+for(let i=0;i<6;i++){
+  document.getElementById('o'+i).addEventListener('input', e=>{
+    if(e.target.value.length===1 && i<5) document.getElementById('o'+(i+1)).focus();
+    if(getCode().length===6) valider();
+  });
+  document.getElementById('o'+i).addEventListener('keydown', e=>{
+    if(e.key==='Backspace' && e.target.value==='' && i>0) document.getElementById('o'+(i-1)).focus();
+  });
+}
+
+function getCode(){ return [0,1,2,3,4,5].map(i=>document.getElementById('o'+i).value).join(''); }
+
+document.getElementById('btn-verify').onclick = valider;
+
+async function valider(){
+  hideErr('err-otp');
+  const code = getCode();
+  if(code.length<6){ showErr('err-otp','Entrez les 6 chiffres.'); return; }
+  document.getElementById('btn-verify').disabled=true;
+  document.getElementById('btn-verify').textContent='Vérification…';
+  try {
+    const r = await fetch(API+'/auth/verifier-otp',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({telephone:localStorage.getItem('tel_auth'),code,ecole_slug:localStorage.getItem('slug_auth')})});
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.erreur||'Code invalide');
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.utilisateur));
+    window.location.href = 'dashboard.html';
+  } catch(e){
+    showErr('err-otp', e.message);
+    [0,1,2,3,4,5].forEach(i=>{ document.getElementById('o'+i).value=''; });
+    document.getElementById('o0').focus();
+  }
+  finally { document.getElementById('btn-verify').disabled=false; document.getElementById('btn-verify').textContent='Valider'; }
+}
+
+function retourTel(){
+  document.getElementById('step-otp').classList.remove('active');
+  document.getElementById('step-tel').classList.add('active');
+}
+
+// Si déjà connecté
+if(localStorage.getItem('token')) window.location.href='dashboard.html';
+</script>
+</body>
+</html>

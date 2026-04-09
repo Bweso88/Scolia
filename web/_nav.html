@@ -1,0 +1,24 @@
+<!-- Fragment de navigation — inclus via JS dans chaque page -->
+<nav style="background:#0D1B3E;color:#fff;padding:0 24px;display:flex;align-items:center;gap:0;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2);">
+  <div style="font-size:20px;font-weight:800;margin-right:32px;white-space:nowrap;">🏫 Scolia</div>
+  <div style="display:flex;gap:2px;flex:1;overflow-x:auto;">
+    <a href="dashboard.html"     class="nav-link">Tableau de bord</a>
+    <a href="eleves.html"        class="nav-link">Élèves</a>
+    <a href="parents.html"       class="nav-link">Parents</a>
+    <a href="classes.html"       class="nav-link">Classes</a>
+    <a href="liaison.html"       class="nav-link">Liaison</a>
+    <a href="remarques.html"     class="nav-link">Remarques</a>
+    <a href="notes.html"         class="nav-link">Notes</a>
+    <a href="frais.html"         class="nav-link">Frais</a>
+    <a href="calendrier.html"    class="nav-link">Calendrier</a>
+    <a href="parametres.html"    class="nav-link">Paramètres</a>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;white-space:nowrap;">
+    <span style="font-size:13px;color:rgba(255,255,255,.7);" id="user-name"></span>
+    <button onclick="deconnexion()" style="background:rgba(255,255,255,.1);border:none;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;">Déconnecter</button>
+  </div>
+</nav>
+<style>
+.nav-link{color:rgba(255,255,255,.75);text-decoration:none;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:500;white-space:nowrap;transition:.15s;}
+.nav-link:hover,.nav-link.active{background:rgba(255,255,255,.15);color:#fff;}
+</style>

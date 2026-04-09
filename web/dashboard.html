@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Tableau de bord</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--amber:#F5A623;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--red:#DC2626;--blue:#2563EB;--orange:#F97316;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:1200px;margin:0 auto;padding:28px 20px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:20px;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:32px;}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px;}
+.stat-card .num{font-size:32px;font-weight:800;color:var(--navy);}
+.stat-card .lbl{font-size:13px;color:var(--muted);margin-top:4px;}
+.stat-card .icon{font-size:24px;margin-bottom:8px;}
+.section{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:24px;}
+.section h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:16px;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);}
+td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f0f2f8;}
+tr:last-child td{border-bottom:none;}
+.alert-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;margin-bottom:8px;font-size:13px;}
+.alert-warn{background:#FFF7ED;color:#92400E;border:1px solid #FED7AA;}
+.alert-error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" style="display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;"></div>
+  <h2>Tableau de bord</h2>
+
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="icon">👨‍🎓</div><div class="num" id="s-eleves">—</div><div class="lbl">Élèves actifs</div></div>
+    <div class="stat-card"><div class="icon">👨‍👩‍👧</div><div class="num" id="s-parents">—</div><div class="lbl">Parents</div></div>
+    <div class="stat-card"><div class="icon">🏫</div><div class="num" id="s-classes">—</div><div class="lbl">Classes</div></div>
+    <div class="stat-card"><div class="icon">📋</div><div class="num" id="s-messages">—</div><div class="lbl">Messages liaison</div></div>
+    <div class="stat-card"><div class="icon">✅</div><div class="num" id="s-dossiers">—</div><div class="lbl">Dossiers actifs</div></div>
+    <div class="stat-card"><div class="icon">⚠️</div><div class="num" id="s-frais" style="color:var(--red)">—</div><div class="lbl">Frais en retard</div></div>
+  </div>
+
+  <div id="alertes-zone"></div>
+
+  <div class="section">
+    <h3>Dernières activités</h3>
+    <table>
+      <thead><tr><th>Type</th><th>Description</th><th>Date</th></tr></thead>
+      <tbody id="activites-body"><tr><td colspan="3" style="text-align:center;color:var(--muted);">Chargement…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+// Injecter nav
+fetch('_nav.html').then(r=>r.text()).then(h=>{
+  document.getElementById('nav-container').innerHTML=h;
+  document.querySelector('a[href="dashboard.html"]')?.classList.add('active');
+});
+
+async function charger() {
+  try {
+    const data = await apiGet('/ecole/stats');
+    const s = data.stats;
+    document.getElementById('s-eleves').textContent  = s.nb_eleves;
+    document.getElementById('s-parents').textContent = s.nb_parents;
+    document.getElementById('s-classes').textContent = s.nb_classes;
+    document.getElementById('s-messages').textContent= s.nb_messages;
+    document.getElementById('s-dossiers').textContent= s.nb_dossiers_actifs;
+    document.getElementById('s-frais').textContent   = s.frais_en_retard;
+
+    // Alertes
+    const az = document.getElementById('alertes-zone');
+    az.innerHTML = '';
+    if (s.frais_en_retard > 0) az.innerHTML += `<div class="alert-item alert-warn">⚠️ ${s.frais_en_retard} frais de scolarité en retard de paiement.</div>`;
+
+    // Activités
+    const tbody = document.getElementById('activites-body');
+    if (!data.dernieres_activites?.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);">Aucune activité récente.</td></tr>';
+    } else {
+      tbody.innerHTML = data.dernieres_activites.map(a => `
+        <tr>
+          <td><span style="background:#EFF2FA;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600;color:var(--navy)">${a.type}</span></td>
+          <td>${a.libelle || '—'}</td>
+          <td style="color:var(--muted)">${formatDate(a.created_at)}</td>
+        </tr>`).join('');
+    }
+  } catch(e) { showAlert(e.message, 'error'); }
+}
+
+charger();
+</script>
+</body>
+</html>

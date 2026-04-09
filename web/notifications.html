@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Notifications</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:900px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:7px;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+.notif-item{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:8px;display:flex;gap:14px;align-items:flex-start;}
+.notif-item.non-lue{border-left:4px solid var(--navy);background:#f8f9ff;}
+.notif-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.notif-body h4{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.notif-body p{font-size:13px;color:var(--body);}
+.notif-meta{font-size:11px;color:var(--muted);margin-top:5px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Notifications</h2>
+    <button class="btn btn-secondary btn-sm" onclick="toutLire()">Tout marquer comme lu</button>
+  </div>
+  <div id="notif-list"></div>
+</div>
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;});
+
+const typeInfo={liaison:{e:'📋',c:'#2563EB'},remarque:{e:'💬',c:'#7C3AED'},note:{e:'📊',c:'#059669'},frais:{e:'💰',c:'#F97316'},evenement:{e:'📅',c:'#F5A623'},autre:{e:'🔔',c:'#8E99B4'}};
+
+async function charger(){
+  try{
+    const data=await apiGet('/notifications');
+    const list=data.items||[];
+    const el=document.getElementById('notif-list');
+    el.innerHTML=list.length?list.map(n=>{
+      const ti=typeInfo[n.type]||typeInfo.autre;
+      return `<div class="notif-item ${n.lue?'':'non-lue'}" onclick="marquerLue(${n.id},this)">
+        <div class="notif-icon" style="background:${ti.c}22">${ti.e}</div>
+        <div class="notif-body" style="flex:1">
+          <h4>${n.titre}</h4>
+          ${n.corps?`<p>${n.corps}</p>`:''}
+          <div class="notif-meta">${formatDate(n.created_at)}${n.lue?' · Lu':' · <strong style="color:var(--navy)">Non lu</strong>'}</div>
+        </div>
+      </div>`;
+    }).join('')
+    :'<p style="text-align:center;color:var(--muted);padding:40px">Aucune notification.</p>';
+  }catch(e){showAlert(e.message,'error');}
+}
+
+async function marquerLue(id,el){
+  if(!el.classList.contains('non-lue'))return;
+  try{
+    await apiPut('/notifications/'+id+'/lire');
+    el.classList.remove('non-lue');
+    const meta=el.querySelector('.notif-meta');
+    if(meta) meta.innerHTML=meta.innerHTML.replace(/<strong.*?<\/strong>/,'Lu');
+  }catch(_){}
+}
+
+async function toutLire(){
+  try{await apiPut('/notifications/lire-tout');showAlert('Toutes les notifications ont été lues.');charger();}
+  catch(e){showAlert(e.message,'error');}
+}
+
+charger();
+</script>
+</body>
+</html>

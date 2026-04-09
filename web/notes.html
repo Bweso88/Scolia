@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Notes</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--red:#DC2626;--orange:#F97316;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:1100px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px;}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select,textarea{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+.filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;padding:18px;background:var(--white);border:1px solid var(--border);border-radius:14px;}
+.filters label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:4px;}
+.filters .f-group{display:flex;flex-direction:column;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--border);background:#fafbff;}
+td{padding:11px 16px;font-size:13px;border-bottom:1px solid #f0f2f8;}
+tr:last-child td{border-bottom:none;}
+.note-badge{padding:3px 10px;border-radius:6px;font-weight:700;font-size:13px;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select,.form-row textarea{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Gestion des notes</h2>
+    <button class="btn" onclick="ouvrirModal()">+ Saisir une note</button>
+  </div>
+
+  <div class="filters">
+    <div class="f-group"><label>Classe</label><select id="f-classe" onchange="onClasseChange()"><option value="">Toutes</option></select></div>
+    <div class="f-group"><label>Élève</label><select id="f-eleve" onchange="chargerNotes()"><option value="">Tous</option></select></div>
+    <div class="f-group"><label>Période</label><select id="f-periode" onchange="chargerNotes()"><option value="">Toutes</option></select></div>
+    <div class="f-group" style="justify-content:flex-end;"><label>&nbsp;</label><button class="btn" onclick="chargerNotes()">Filtrer</button></div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Élève</th><th>Matière</th><th>Note</th><th>Période</th><th>Type</th><th>Date</th><th>Commentaire</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h3>Saisir une note</h3>
+    <div class="form-row"><label>Élève *</label><select id="m-eleve"><option value="">— Choisir —</option></select></div>
+    <div class="form-row"><label>Matière *</label><select id="m-matiere"><option value="">— Choisir —</option></select></div>
+    <div class="form-row"><label>Période *</label><select id="m-periode"><option value="">— Choisir —</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row"><label>Note *</label><input type="number" id="m-note" min="0" max="20" step="0.25" placeholder="ex: 15"></div>
+      <div class="form-row"><label>Sur</label><input type="number" id="m-sur" value="20" min="1"></div>
+    </div>
+    <div class="form-row">
+      <label>Type d'évaluation</label>
+      <select id="m-type">
+        <option value="controle">Contrôle</option>
+        <option value="devoir">Devoir</option>
+        <option value="examen">Examen</option>
+        <option value="oral">Oral</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Date d'évaluation</label><input type="date" id="m-date"></div>
+    <div class="form-row"><label>Commentaire</label><textarea id="m-comment" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn" onclick="saisir()">Enregistrer</button>
+      <button class="btn btn-secondary" onclick="fermerModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="notes.html"]')?.classList.add('active');});
+
+let tousEleves=[], toutesMatieres=[], toutesPeriodes=[];
+
+async function init() {
+  try {
+    const [dc,de,dm,dp]=await Promise.all([apiGet('/classes'),apiGet('/eleves',{par_page:200}),apiGet('/matieres'),apiGet('/periodes')]);
+    tousEleves     = de.items||[];
+    toutesMatieres = dm.matieres||[];
+    toutesPeriodes = dp.periodes||[];
+
+    // Filtre classe
+    const fc=document.getElementById('f-classe');
+    fc.innerHTML='<option value="">Toutes</option>';
+    (dc.classes||[]).forEach(c=>fc.innerHTML+=`<option value="${c.id}">${c.nom}</option>`);
+
+    // Filtre période
+    const fp=document.getElementById('f-periode');
+    fp.innerHTML='<option value="">Toutes</option>';
+    toutesPeriodes.forEach(p=>fp.innerHTML+=`<option value="${p.id}">${p.nom}</option>`);
+
+    // Modal eleves
+    const me=document.getElementById('m-eleve');
+    me.innerHTML='<option value="">— Choisir —</option>';
+    tousEleves.forEach(e=>me.innerHTML+=`<option value="${e.id}">${e.prenom} ${e.nom}</option>`);
+
+    // Modal matieres
+    const mm=document.getElementById('m-matiere');
+    mm.innerHTML='<option value="">— Choisir —</option>';
+    toutesMatieres.forEach(m=>mm.innerHTML+=`<option value="${m.id}">${m.nom} (coeff.${m.coefficient})</option>`);
+
+    // Modal periodes
+    const mpe=document.getElementById('m-periode');
+    mpe.innerHTML='<option value="">— Choisir —</option>';
+    toutesPeriodes.forEach(p=>mpe.innerHTML+=`<option value="${p.id}">${p.nom}</option>`);
+
+    // Date du jour par défaut
+    document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+
+    chargerNotes();
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function onClasseChange() {
+  const cid = document.getElementById('f-classe').value;
+  const fe  = document.getElementById('f-eleve');
+  fe.innerHTML='<option value="">Tous</option>';
+  tousEleves.filter(e=>!cid||String(e.classe_id)===cid).forEach(e=>fe.innerHTML+=`<option value="${e.id}">${e.prenom} ${e.nom}</option>`);
+  chargerNotes();
+}
+
+async function chargerNotes() {
+  const params={page:1};
+  const eid=document.getElementById('f-eleve').value; if(eid) params.eleve_id=eid;
+  const pid=document.getElementById('f-periode').value; if(pid) params.periode_id=pid;
+  try {
+    const data=await apiGet('/notes',params);
+    const list=data.items||[];
+    document.getElementById('tbody').innerHTML=list.length?list.map(n=>{
+      const pct=(n.note_sur>0)?n.note/n.note_sur:0;
+      const c=pct>=0.7?'#059669':pct>=0.5?'#F97316':'#DC2626';
+      return `<tr>
+        <td style="font-weight:600;color:var(--navy)">${n.eleve_prenom||''} ${n.eleve_nom||''}</td>
+        <td>${n.matiere_nom||'—'}</td>
+        <td><span class="note-badge" style="background:${c}22;color:${c}">${parseFloat(n.note).toFixed(1)}/${parseFloat(n.note_sur).toFixed(0)}</span></td>
+        <td>${n.periode_nom||'—'}</td>
+        <td style="color:var(--muted)">${n.type_evaluation||'—'}</td>
+        <td style="color:var(--muted)">${n.date_evaluation?formatDate(n.date_evaluation):'—'}</td>
+        <td style="color:var(--muted);font-style:italic">${n.commentaire||''}</td>
+      </tr>`;
+    }).join('')
+    :'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">Aucune note trouvée.</td></tr>';
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function ouvrirModal(){ document.getElementById('modal').classList.add('open'); }
+function fermerModal(){ document.getElementById('modal').classList.remove('open'); }
+
+async function saisir(){
+  const eleve_id   = document.getElementById('m-eleve').value;
+  const matiere_id = document.getElementById('m-matiere').value;
+  const periode_id = document.getElementById('m-periode').value;
+  const note       = document.getElementById('m-note').value;
+  if(!eleve_id||!matiere_id||!periode_id||!note){showAlert('Champs requis manquants.','error');return;}
+  try{
+    await apiPost('/notes',{
+      eleve_id:parseInt(eleve_id),matiere_id:parseInt(matiere_id),periode_id:parseInt(periode_id),
+      note:parseFloat(note),note_sur:parseFloat(document.getElementById('m-sur').value)||20,
+      type_evaluation:document.getElementById('m-type').value,
+      date_evaluation:document.getElementById('m-date').value||null,
+      commentaire:document.getElementById('m-comment').value.trim()||null,
+    });
+    fermerModal();showAlert('Note enregistrée.');chargerNotes();
+  }catch(e){showAlert(e.message,'error');}
+}
+
+init();
+</script>
+</body>
+</html>

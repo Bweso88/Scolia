@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scolia — Parents</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0D1B3E;--amber:#F5A623;--bg:#F2F4F9;--white:#fff;--border:#DDE2EF;--body:#4B5670;--muted:#8E99B4;--green:#059669;--red:#DC2626;--orange:#F97316;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--body);}
+.page{max-width:1200px;margin:0 auto;padding:28px 20px;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+h2{font-size:22px;font-weight:800;color:var(--navy);}
+.btn{padding:10px 20px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s;}
+.btn:hover{opacity:.9;}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px;}
+.btn-green{background:var(--green);}
+.btn-red{background:var(--red);}
+.btn-secondary{background:var(--bg);color:var(--navy);border:1.5px solid var(--border);}
+input,select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:14px;color:var(--navy);outline:none;background:var(--white);}
+input:focus,select:focus{border-color:var(--navy);}
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--border);background:#fafbff;}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid #f0f2f8;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#fafbff;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+.modal.open{display:flex;}
+.modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;}
+.modal-box h3{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:20px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--body);margin-bottom:5px;}
+.form-row input,.form-row select{width:100%;}
+.form-actions{display:flex;gap:10px;margin-top:20px;}
+.alert{display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;}
+</style>
+</head>
+<body>
+<div id="nav-container"></div>
+<div class="page">
+  <div id="alert" class="alert"></div>
+  <div class="top-bar">
+    <h2>Parents &amp; Dossiers</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <input type="text" id="search" placeholder="Rechercher…" oninput="filtrer()" style="width:200px;">
+      <select id="filtre-statut" onchange="filtrer()">
+        <option value="">Tous les statuts</option>
+        <option value="actif">Dossier actif</option>
+        <option value="inactif">Dossier inactif</option>
+      </select>
+      <button class="btn" onclick="ouvrirModalParent()">+ Ajouter un parent</button>
+    </div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Parent</th><th>Téléphone</th><th>Enfant lié</th><th>Statut dossier</th><th>Expiration</th><th>Actions</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal parent -->
+<div class="modal" id="modal-parent">
+  <div class="modal-box">
+    <h3>Ajouter un parent</h3>
+    <div class="form-row"><label>Prénom</label><input id="p-prenom"></div>
+    <div class="form-row"><label>Nom</label><input id="p-nom"></div>
+    <div class="form-row"><label>Téléphone *</label><input id="p-tel" placeholder="+242060000000"></div>
+    <div class="form-actions">
+      <button class="btn" onclick="creerParent()">Créer le parent</button>
+      <button class="btn btn-secondary" onclick="fermerTout()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal lier à un élève -->
+<div class="modal" id="modal-lier">
+  <div class="modal-box">
+    <h3>Lier un enfant</h3>
+    <input type="hidden" id="lier-parent-id">
+    <div class="form-row"><label>Sélectionner l'élève</label><select id="lier-eleve"><option value="">— Choisir —</option></select></div>
+    <div class="form-actions">
+      <button class="btn" onclick="lierEleve()">Lier l'enfant</button>
+      <button class="btn btn-secondary" onclick="fermerTout()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal activation dossier -->
+<div class="modal" id="modal-activer">
+  <div class="modal-box">
+    <h3>Activer le dossier</h3>
+    <input type="hidden" id="activer-dossier-id">
+    <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Le dossier sera activé jusqu'à la fin de l'année scolaire en cours.</p>
+    <div class="form-actions">
+      <button class="btn btn-green" onclick="activerDossier()">Confirmer l'activation</button>
+      <button class="btn btn-secondary" onclick="fermerTout()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="_base.js"></script>
+<script>
+fetch('_nav.html').then(r=>r.text()).then(h=>{document.getElementById('nav-container').innerHTML=h;document.querySelector('a[href="parents.html"]')?.classList.add('active');});
+
+let tousDossiers = [], tousEleves = [];
+
+async function charger() {
+  try {
+    const [dd, de] = await Promise.all([apiGet('/dossiers'), apiGet('/eleves',{par_page:200})]);
+    tousDossiers = dd.dossiers || [];
+    tousEleves   = de.items   || [];
+    const sel = document.getElementById('lier-eleve');
+    sel.innerHTML = '<option value="">— Choisir —</option>';
+    tousEleves.forEach(e=>sel.innerHTML+=`<option value="${e.id}">${e.prenom} ${e.nom} (${e.classe_nom||'sans classe'})</option>`);
+    afficher(tousDossiers);
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+function filtrer() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const s = document.getElementById('filtre-statut').value;
+  afficher(tousDossiers.filter(d=>{
+    const nom = ((d.parent_prenom||'')+(d.parent_nom||'')+(d.telephone||'')).toLowerCase();
+    const ok_q = !q || nom.includes(q);
+    const ok_s = !s || (s==='actif'?d.actif:!d.actif);
+    return ok_q && ok_s;
+  }));
+}
+
+function afficher(list) {
+  document.getElementById('tbody').innerHTML = list.length ? list.map(d=>`
+    <tr>
+      <td style="font-weight:600;color:var(--navy)">${d.parent_prenom||''} ${d.parent_nom||''}</td>
+      <td>${d.telephone||'—'}</td>
+      <td>${d.eleve_prenom||''} ${d.eleve_nom||''}</td>
+      <td>${d.actif
+        ? '<span style="background:#D1FAE5;color:var(--green);padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600;">Actif</span>'
+        : '<span style="background:#FEE2E2;color:var(--red);padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600;">Inactif</span>'}</td>
+      <td>${d.date_expiration?formatDate(d.date_expiration):'—'}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${!d.actif ? `<button class="btn btn-sm btn-green" onclick="ouvrirActiver(${d.id})">Activer</button>` : `<button class="btn btn-sm btn-red" onclick="desactiverDossier(${d.id})">Désactiver</button>`}
+      </td>
+    </tr>`).join('')
+  : '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">Aucun dossier trouvé.</td></tr>';
+}
+
+function ouvrirModalParent() { document.getElementById('modal-parent').classList.add('open'); }
+function ouvrirActiver(id) { document.getElementById('activer-dossier-id').value=id; document.getElementById('modal-activer').classList.add('open'); }
+function fermerTout() { document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open')); }
+
+async function creerParent() {
+  const tel = document.getElementById('p-tel').value.trim();
+  if (!tel) { showAlert('Téléphone requis.','error'); return; }
+  try {
+    await apiPost('/utilisateurs', { telephone:tel, prenom:document.getElementById('p-prenom').value.trim(), nom:document.getElementById('p-nom').value.trim(), role:'parent' });
+    fermerTout(); showAlert('Parent créé.'); charger();
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+async function lierEleve() {
+  const pid = document.getElementById('lier-parent-id').value;
+  const eid = document.getElementById('lier-eleve').value;
+  if (!pid || !eid) { showAlert('Sélectionnez un élève.','error'); return; }
+  try {
+    await apiPost('/dossiers', { parent_id:parseInt(pid), eleve_id:parseInt(eid) });
+    fermerTout(); showAlert('Dossier créé.'); charger();
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+async function activerDossier() {
+  const id = document.getElementById('activer-dossier-id').value;
+  try {
+    await apiPut('/dossiers/'+id+'/activer');
+    fermerTout(); showAlert('Dossier activé.'); charger();
+  } catch(e){ showAlert(e.message,'error'); }
+}
+
+async function desactiverDossier(id) {
+  if (!confirm('Désactiver ce dossier ?')) return;
+  try { await apiPut('/dossiers/'+id+'/desactiver'); showAlert('Dossier désactivé.'); charger(); }
+  catch(e){ showAlert(e.message,'error'); }
+}
+
+charger();
+</script>
+</body>
+</html>
