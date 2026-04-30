@@ -12,7 +12,7 @@ if ($method === 'GET') {
     $futur = $_GET['futur'] ?? '0';
     $where  = "ecole_id = ?";
     $params = [$eid];
-    if ($futur === '1') { $where .= " AND date_debut >= CURDATE()"; }
+    if ($futur === '1') { $where .= " AND date_debut >= CURRENT_DATE"; }
     $stmt = $pdo->prepare("
         SELECT e.id, e.titre, e.description, e.date_debut, e.heure_debut, e.lieu, e.type, e.created_at,
                u.prenom AS auteur_prenom, u.nom AS auteur_nom

@@ -14,7 +14,7 @@ $stmt->execute([$id, $eid]);
 $msg = $stmt->fetch();
 if (!$msg) repondreErreur("Message introuvable.", 404);
 
-$ins = $pdo->prepare("INSERT IGNORE INTO accuses_reception (message_id, parent_id) VALUES (?, ?)");
+$ins = $pdo->prepare("INSERT INTO accuses_reception (message_id, parent_id) VALUES (?, ?) ON CONFLICT DO NOTHING");
 $ins->execute([$id, $payload['user_id']]);
 
 repondreSucces(null, 'Accusé de réception enregistré.');

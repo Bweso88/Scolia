@@ -19,7 +19,7 @@ if ($method === 'GET') {
         $where .= " AND fs.eleve_id IN (
             SELECT dp.eleve_id FROM dossiers_parents dp
             WHERE dp.parent_id = ? AND dp.actif = TRUE
-            AND (dp.date_expiration IS NULL OR dp.date_expiration >= CURDATE())
+            AND (dp.date_expiration IS NULL OR dp.date_expiration >= CURRENT_DATE)
         )";
         $params[] = $payload['user_id'];
     }

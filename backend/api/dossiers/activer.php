@@ -25,7 +25,7 @@ $date_expiration = $dossier['date_fin_scolarite'] ?? date('Y-06-30', strtotime('
 
 $pdo->prepare("
     UPDATE dossiers_parents
-    SET actif = TRUE, date_activation = CURDATE(), date_expiration = ?
+    SET actif = TRUE, date_activation = CURRENT_DATE, date_expiration = ?
     WHERE id = ?
 ")->execute([$date_expiration, $id]);
 

@@ -15,7 +15,7 @@ if ($payload['role'] === 'parent') {
     $check = $pdo->prepare("
         SELECT dp.id FROM dossiers_parents dp
         WHERE dp.parent_id = ? AND dp.eleve_id = ? AND dp.actif = TRUE
-        AND (dp.date_expiration IS NULL OR dp.date_expiration >= CURDATE())
+        AND (dp.date_expiration IS NULL OR dp.date_expiration >= CURRENT_DATE)
     ");
     $check->execute([$payload['user_id'], $eleve_id]);
     if (!$check->fetch()) repondreErreur("Accès non autorisé à ce dossier.", 403);
