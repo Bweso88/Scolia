@@ -85,10 +85,36 @@ class _NotesScreenState extends State<NotesScreen> {
   }
 
   Widget _vueEnseignant() {
-    return const EmptyState(
-      message: 'Saisie de notes',
-      sousTitre: 'Utilisez le tableau de bord web pour saisir les notes.',
-      icone: Icons.computer_outlined,
+    return Stack(
+      children: [
+        ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.groups_outlined, color: AppColors.navy),
+                title: Text('Voir ma classe',
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.navy)),
+                subtitle: Text('Liste des élèves',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
+                trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
+                onTap: () => context.go('/teacher/ma-classe'),
+              ),
+            ),
+          ],
+        ),
+        Positioned(
+          bottom: 16, right: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () => context.push('/notes/saisir'),
+            backgroundColor: AppColors.navy,
+            icon: const Icon(Icons.add, color: AppColors.white),
+            label: Text('Saisir une note',
+                style: GoogleFonts.plusJakartaSans(color: AppColors.white, fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
     );
   }
 }

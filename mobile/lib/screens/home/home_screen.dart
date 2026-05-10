@@ -9,6 +9,7 @@ import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../services/api_service.dart';
 import '../../models/dossier.dart';
+import '../../models/eleve.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,29 +20,40 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Dossier> _dossiers = [];
-  bool _chargeDossiers = false;
+  List<Eleve>   _eleves   = [];
+  bool _charge = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _chargerDossiers();
+      _charger();
       context.read<LiaisonProvider>().charger(recharger: true);
     });
   }
 
-  Future<void> _chargerDossiers() async {
-    setState(() => _chargeDossiers = true);
+  Future<void> _charger() async {
+    setState(() => _charge = true);
+    final user = context.read<AuthProvider>().user;
     try {
-      final data = await apiService.get('/dossiers');
-      setState(() {
-        _dossiers = (data['dossiers'] as List)
-            .map((e) => Dossier.fromJson(e as Map<String, dynamic>))
-            .toList();
-      });
+      if (user?.estEnseignant == true) {
+        final data = await apiService.get('/eleves');
+        setState(() {
+          _eleves = (data['items'] as List)
+              .map((e) => Eleve.fromJson(e as Map<String, dynamic>))
+              .toList();
+        });
+      } else {
+        final data = await apiService.get('/dossiers');
+        setState(() {
+          _dossiers = (data['dossiers'] as List)
+              .map((e) => Dossier.fromJson(e as Map<String, dynamic>))
+              .toList();
+        });
+      }
     } catch (_) {
     } finally {
-      setState(() => _chargeDossiers = false);
+      setState(() => _charge = false);
     }
   }
 
@@ -73,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _chargerDossiers,
+        onRefresh: _charger,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -83,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (user?.estParent == true) ...[
                 Text('Mes enfants', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy)),
                 const SizedBox(height: 12),
-                if (_chargeDossiers)
+                if (_charge)
                   const Center(child: CircularProgressIndicator())
                 else if (_dossiers.isEmpty)
                   _carteVide('Aucun enfant lié', 'Contactez l\'école pour activer votre dossier.', Icons.child_care_outlined)
@@ -91,24 +103,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   ..._dossiers.map((d) => _CarteEnfant(dossier: d)),
                 const SizedBox(height: 20),
               ],
+              if (user?.estEnseignant == true) ...[
+                Text('Ma classe', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy)),
+                const SizedBox(height: 12),
+                _CarteClasse(nbEleves: _eleves.length, classeNom: _eleves.isNotEmpty ? (_eleves.first.classeNom ?? '') : ''),
+                const SizedBox(height: 20),
+              ],
               Text('Accès rapide', style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy)),
               const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.5,
-                children: [
-                  _CarteAcces(icone: Icons.menu_book_outlined, titre: 'Liaison', couleur: AppColors.blue, onTap: () => context.go('/liaison')),
-                  _CarteAcces(icone: Icons.comment_outlined, titre: 'Remarques', couleur: AppColors.purple, onTap: () => context.go('/remarques')),
-                  _CarteAcces(icone: Icons.bar_chart_outlined, titre: 'Notes', couleur: AppColors.green, onTap: () => context.go('/notes')),
-                  _CarteAcces(icone: Icons.account_balance_wallet_outlined, titre: 'Frais', couleur: AppColors.orange, onTap: () => context.go('/frais')),
-                  _CarteAcces(icone: Icons.calendar_today_outlined, titre: 'Calendrier', couleur: AppColors.navy, onTap: () => context.go('/calendrier')),
-                  _CarteAcces(icone: Icons.notifications_outlined, titre: 'Notifications', couleur: AppColors.amber, onTap: () => context.go('/notifications')),
-                ],
-              ),
+              if (user?.estEnseignant == true)
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _CarteAcces(icone: Icons.groups_outlined,         titre: 'Ma classe',   couleur: AppColors.navy,   onTap: () => context.go('/teacher/ma-classe')),
+                    _CarteAcces(icone: Icons.add_chart_outlined,      titre: 'Saisir note', couleur: AppColors.green,  onTap: () => context.push('/notes/saisir')),
+                    _CarteAcces(icone: Icons.menu_book_outlined,      titre: 'Liaison',     couleur: AppColors.blue,   onTap: () => context.go('/liaison')),
+                    _CarteAcces(icone: Icons.comment_outlined,        titre: 'Remarques',   couleur: AppColors.purple, onTap: () => context.go('/remarques')),
+                    _CarteAcces(icone: Icons.calendar_today_outlined, titre: 'Calendrier',  couleur: AppColors.amber,  onTap: () => context.go('/calendrier')),
+                    _CarteAcces(icone: Icons.notifications_outlined,  titre: 'Notifications', couleur: AppColors.orange, onTap: () => context.go('/notifications')),
+                  ],
+                )
+              else
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _CarteAcces(icone: Icons.menu_book_outlined,                 titre: 'Liaison',       couleur: AppColors.blue,   onTap: () => context.go('/liaison')),
+                    _CarteAcces(icone: Icons.comment_outlined,                   titre: 'Remarques',     couleur: AppColors.purple, onTap: () => context.go('/remarques')),
+                    _CarteAcces(icone: Icons.bar_chart_outlined,                 titre: 'Notes',         couleur: AppColors.green,  onTap: () => context.go('/notes')),
+                    _CarteAcces(icone: Icons.account_balance_wallet_outlined,    titre: 'Frais',         couleur: AppColors.orange, onTap: () => context.go('/frais')),
+                    _CarteAcces(icone: Icons.calendar_today_outlined,            titre: 'Calendrier',    couleur: AppColors.navy,   onTap: () => context.go('/calendrier')),
+                    _CarteAcces(icone: Icons.notifications_outlined,             titre: 'Notifications', couleur: AppColors.amber,  onTap: () => context.go('/notifications')),
+                  ],
+                ),
             ],
           ),
         ),
@@ -128,6 +164,47 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(titre, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.body)),
             Text(sous, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted), textAlign: TextAlign.center),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CarteClasse extends StatelessWidget {
+  final int nbEleves;
+  final String classeNom;
+  const _CarteClasse({required this.nbEleves, required this.classeNom});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        onTap: () => context.go('/teacher/ma-classe'),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(color: AppColors.navy.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.groups_outlined, color: AppColors.navy, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(classeNom.isNotEmpty ? classeNom : 'Ma classe',
+                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: AppColors.navy)),
+                    Text('$nbEleves élève${nbEleves > 1 ? 's' : ''}',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.muted),
+            ],
+          ),
         ),
       ),
     );

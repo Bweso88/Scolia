@@ -17,6 +17,8 @@ import '../screens/frais/frais_screen.dart';
 import '../screens/frais/detail_frais_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/profil/profil_screen.dart';
+import '../screens/teacher/ma_classe_screen.dart';
+import '../screens/notes/saisir_note_screen.dart';
 
 GoRouter buildRouter(BuildContext context) {
   final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -57,8 +59,13 @@ GoRouter buildRouter(BuildContext context) {
         path: '/frais/:eleveId',
         builder: (_, state) => DetailFraisScreen(eleveId: int.parse(state.pathParameters['eleveId']!)),
       ),
-      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
-      GoRoute(path: '/profil',     builder: (_, __) => const ProfilScreen()),
+      GoRoute(path: '/notifications',        builder: (_, __) => const NotificationsScreen()),
+      GoRoute(path: '/profil',               builder: (_, __) => const ProfilScreen()),
+      GoRoute(path: '/teacher/ma-classe',    builder: (_, __) => const MaClasseScreen()),
+      GoRoute(
+        path: '/notes/saisir',
+        builder: (_, state) => SaisirNoteScreen(eleveId: state.extra as int?),
+      ),
     ],
     errorBuilder: (_, state) => Scaffold(
       body: Center(child: Text('Page introuvable : ${state.uri}')),
