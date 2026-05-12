@@ -37,27 +37,12 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> demanderOtp(String telephone) async {
+  Future<void> seConnecter(String telephone, String code) async {
     _erreur = null;
     _charge = true;
     notifyListeners();
     try {
-      await _authService.demanderOtp(telephone);
-    } on Exception catch (e) {
-      _erreur = e.toString().replaceFirst('Exception: ', '');
-      rethrow;
-    } finally {
-      _charge = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> verifierOtp(String telephone, String code) async {
-    _erreur = null;
-    _charge = true;
-    notifyListeners();
-    try {
-      final result = await _authService.verifierOtp(telephone, code);
+      final result = await _authService.seConnecter(telephone, code);
       _token = result.token;
       _user  = result.user;
       apiService.setToken(_token);

@@ -38,6 +38,7 @@ function router(string $method, string $uri, array $segments): void {
     // ── Auth ──────────────────────────────────────────────────────────────────
     if ($n >= 2 && $s[0] === 'auth') {
         switch ($s[1]) {
+            case 'connexion':     require __DIR__ . '/api/auth/connexion.php';     return;
             case 'demander-otp':  require __DIR__ . '/api/auth/demander_otp.php';  return;
             case 'verifier-otp':  require __DIR__ . '/api/auth/verifier_otp.php';  return;
             case 'deconnexion':   require __DIR__ . '/api/auth/deconnexion.php';   return;

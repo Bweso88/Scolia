@@ -1,6 +1,7 @@
 <?php
 /**
  * PUT /api/dossiers/{id}/activer
+ * Génère un code_dossier unique à partager avec le parent
  */
 
 $payload = exigerAuth();
@@ -9,7 +10,6 @@ $pdo = getDB();
 $id  = (int) ROUTE_ID;
 $eid = $payload['ecole_id'];
 
-// Récupérer le dossier et la date de fin de scolarité de l'école
 $stmt = $pdo->prepare("
     SELECT dp.id, e.date_fin_scolarite
     FROM dossiers_parents dp
@@ -21,15 +21,26 @@ $stmt->execute([$id, $eid]);
 $dossier = $stmt->fetch();
 if (!$dossier) repondreErreur("Dossier introuvable.", 404);
 
+// Générer un code unique lisible (sans 0, O, 1, I pour éviter confusion)
+$chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+do {
+    $code = '';
+    for ($i = 0; $i < 8; $i++) {
+        $code .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    $existe = $pdo->prepare("SELECT id FROM dossiers_parents WHERE code_dossier = ?");
+    $existe->execute([$code]);
+} while ($existe->fetch());
+
 $date_expiration = $dossier['date_fin_scolarite'] ?? date('Y-06-30', strtotime('+1 year'));
 
 $pdo->prepare("
     UPDATE dossiers_parents
-    SET actif = TRUE, date_activation = CURRENT_DATE, date_expiration = ?
+    SET actif = TRUE, date_activation = CURRENT_DATE, date_expiration = ?, code_dossier = ?
     WHERE id = ?
-")->execute([$date_expiration, $id]);
+")->execute([$date_expiration, $code, $id]);
 
-// Notifier le parent
+// Récupérer infos pour notification
 $dp = $pdo->prepare("SELECT parent_id, eleve_id FROM dossiers_parents WHERE id = ?");
 $dp->execute([$id]);
 $info = $dp->fetch();
@@ -45,14 +56,18 @@ $el = $eleve->fetch();
 $titre = '✅ Dossier activé';
 $corps = "Le dossier de {$el['prenom']} {$el['nom']} est maintenant actif.";
 
-$ins = $pdo->prepare("
+$pdo->prepare("
     INSERT INTO notifications (ecole_id, destinataire_id, titre, corps, type, reference_id)
     VALUES (?, ?, ?, ?, 'autre', ?)
-");
-$ins->execute([$eid, $info['parent_id'], $titre, $corps, $id]);
+")->execute([$eid, $info['parent_id'], $titre, $corps, $id]);
 
 if (!empty($p['fcm_token'])) {
     envoyerNotificationFCM($p['fcm_token'], $titre, $corps, ['type' => 'dossier', 'reference_id' => (string)$id]);
 }
 
-repondreSucces(null, 'Dossier activé.');
+repondreJson([
+    'succes'       => true,
+    'message'      => 'Dossier activé.',
+    'code_dossier' => $code,
+    'instruction'  => "Communiquez ce code au parent pour qu'il se connecte à l'application.",
+]);

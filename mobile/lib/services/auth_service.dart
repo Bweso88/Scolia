@@ -4,21 +4,14 @@ import '../models/user.dart';
 import 'api_service.dart';
 
 class AuthService {
-  static const _keyToken = 'token';
-  static const _keyRole  = 'role';
+  static const _keyToken  = 'token';
+  static const _keyRole   = 'role';
   static const _keyUserId = 'user_id';
 
-  Future<void> demanderOtp(String telephone) async {
-    await apiService.post('/auth/demander-otp', body: {
+  Future<({String token, User user})> seConnecter(String telephone, String code) async {
+    final data = await apiService.post('/auth/connexion', body: {
       'telephone':  telephone,
-      'ecole_slug': AppConfig.ecoleSlug,
-    });
-  }
-
-  Future<({String token, User user})> verifierOtp(String telephone, String code) async {
-    final data = await apiService.post('/auth/verifier-otp', body: {
-      'telephone':  telephone,
-      'code':       code,
+      'code':       code.toUpperCase(),
       'ecole_slug': AppConfig.ecoleSlug,
     });
     final token = data['token'] as String;
@@ -27,7 +20,7 @@ class AuthService {
   }
 
   Future<void> deconnexion() async {
-    await apiService.post('/auth/deconnexion');
+    try { await apiService.post('/auth/deconnexion'); } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);
     await prefs.remove(_keyRole);
