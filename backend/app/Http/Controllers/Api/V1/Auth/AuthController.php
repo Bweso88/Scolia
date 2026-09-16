@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\PermissionRegistrar;
 
 /**
  * Voir docs/PRODUCT_ARCHITECTURE.md §9 : le tenant n'est jamais choisi par
@@ -76,6 +77,10 @@ class AuthController extends Controller
 
     private function respondWithToken(User $user)
     {
+        // Hors de resolve.tenant (routes d'auth), le registrar spatie n'a
+        // pas encore de team_id : sans ceci, $user->roles reviendrait vide.
+        app(PermissionRegistrar::class)->setPermissionsTeamId($user->tenant_id);
+
         $contexts = $user->parent_identity_id
             ? User::where('parent_identity_id', $user->parent_identity_id)
                 ->with('tenant')
@@ -89,7 +94,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $user->createToken(request()->userAgent() ?? 'mobile')->plainTextToken,
-            'user' => new UserResource($user->load('tenant')),
+            'user' => new UserResource($user->load(['tenant.settings', 'roles', 'teacher.schoolClasses'])),
             'contexts' => $contexts,
         ]);
     }

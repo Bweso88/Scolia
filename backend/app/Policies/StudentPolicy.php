@@ -24,12 +24,13 @@ class StudentPolicy
             return false;
         }
 
-        if ($user->can('student.manage')) {
-            return true;
+        if ($user->can('student.manage') || $user->hasRole(['teacher', 'surveillant'])) {
+            return $user->can('student.view');
         }
 
-        // Un parent ne voit que ses propres enfants ; un enseignant voit
-        // les élèves de ses classes (affiné avec teacher_assignments en V2).
+        // Un parent ne voit que ses propres enfants (affiné aux élèves de
+        // ses classes précises pour l'enseignant en V2, via
+        // teacher_assignments).
         return $user->can('student.view')
             && $student->guardians()->whereKey($user->id)->exists();
     }

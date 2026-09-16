@@ -10,6 +10,6 @@ class MeController extends Controller
 {
     public function __invoke(Request $request)
     {
-        return new UserResource($request->user()->load(['tenant.settings', 'roles']));
+        return new UserResource($request->user()->load(['tenant.settings', 'roles', 'teacher.schoolClasses']));
     }
 }

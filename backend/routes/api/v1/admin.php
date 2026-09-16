@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\HomeworkController;
 use App\Http\Controllers\Api\V1\Admin\MessageController;
 use App\Http\Controllers\Api\V1\Admin\MessagingPermissionController;
 use App\Http\Controllers\Api\V1\Admin\StudentController;
+use App\Http\Controllers\Api\V1\Admin\SubjectController;
 use App\Http\Controllers\Api\V1\Admin\TimetableSlotController;
 use Illuminate\Support\Facades\Route;
 
@@ -60,4 +61,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->only(['index', 'store']);
     Route::apiResource('grades', GradeController::class)
         ->only(['index', 'store', 'update']);
+
+    Route::get('subjects', [SubjectController::class, 'index'])->name('subjects.index');
 });

@@ -19,8 +19,10 @@ class StudentController extends Controller
             ->with('schoolClass')
             ->when($request->integer('school_class_id'), fn ($query, $classId) => $query->where('school_class_id', $classId))
             ->when(
-                $request->user()->cannot('student.manage'),
-                // Un parent ne liste que ses propres enfants.
+                $request->user()->cannot('student.manage') && $request->user()->hasRole('parent'),
+                // Un parent ne liste que ses propres enfants ; un enseignant
+                // ou un surveillant voit les élèves de l'école (filtrables
+                // par school_class_id ci-dessus).
                 fn ($query) => $query->whereHas('guardians', fn ($q) => $q->whereKey($request->user()->id))
             )
             ->orderBy('last_name')
