@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../widgets/empty_state.dart';
 import '../../models/notification_app.dart';
-import '../../services/api_service.dart';
+import '../../services/notification_service_api.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -14,6 +14,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  final _service = NotificationApiService();
+
   List<NotificationApp> _notifications = [];
   bool _charge = false;
   int _nbNonLues = 0;
@@ -27,54 +29,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _charger() async {
     setState(() => _charge = true);
     try {
-      final data = await apiService.get('/notifications');
+      final resultat = await _service.getNotifications();
       setState(() {
-        _notifications = (data['items'] as List)
-            .map((e) => NotificationApp.fromJson(e as Map<String, dynamic>))
-            .toList();
-        _nbNonLues = data['nb_non_lues'] as int? ?? 0;
+        _notifications = resultat.notifications;
+        _nbNonLues = resultat.nonLues;
       });
     } catch (_) {
     } finally {
-      setState(() => _charge = false);
+      if (mounted) setState(() => _charge = false);
     }
   }
 
   Future<void> _toutMarquerLu() async {
     try {
-      await apiService.put('/notifications/lire-tout');
+      await _service.toutMarquerLu();
       await _charger();
     } catch (_) {}
   }
 
-  Future<void> _marquerLue(int id) async {
+  Future<void> _marquerLue(NotificationApp n) async {
+    if (n.lue) return;
     try {
-      await apiService.put('/notifications/$id/lire');
-      setState(() {
-        final idx = _notifications.indexWhere((n) => n.id == id);
-        if (idx != -1) {
-          _notifications[idx] = NotificationApp(
-            id: _notifications[idx].id,
-            titre: _notifications[idx].titre,
-            corps: _notifications[idx].corps,
-            type: _notifications[idx].type,
-            referenceId: _notifications[idx].referenceId,
-            lue: true,
-            createdAt: _notifications[idx].createdAt,
-          );
-          _nbNonLues = (_nbNonLues - 1).clamp(0, _nbNonLues);
-        }
-      });
+      await _service.marquerLue(n.id);
+      await _charger();
     } catch (_) {}
   }
 
   static const _icones = {
-    'liaison':   Icons.menu_book_outlined,
-    'remarque':  Icons.comment_outlined,
-    'note':      Icons.bar_chart_outlined,
-    'frais':     Icons.account_balance_wallet_outlined,
-    'evenement': Icons.calendar_today_outlined,
-    'autre':     Icons.notifications_outlined,
+    'homework':     Icons.assignment_outlined,
+    'attendance':   Icons.event_busy_outlined,
+    'conversation': Icons.forum_outlined,
+    'announcement': Icons.campaign_outlined,
   };
 
   @override
@@ -109,7 +94,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             : _notifications.isEmpty
                 ? const EmptyState(
                     message: 'Aucune notification',
-                    sousTitre: 'Vous serez notifié des nouveaux messages, notes et événements.',
+                    sousTitre: 'Vous serez notifié des nouveaux devoirs, messages et annonces.',
                     icone: Icons.notifications_none_outlined,
                   )
                 : ListView.separated(
@@ -136,7 +121,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ),
                         ),
                         title: Text(
-                          n.titre,
+                          n.titre ?? '—',
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: n.lue ? FontWeight.w500 : FontWeight.w700,
                             fontSize: 13,
@@ -156,7 +141,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ],
                         ),
                         isThreeLine: n.corps != null,
-                        onTap: n.lue ? null : () => _marquerLue(n.id),
+                        onTap: n.lue ? null : () => _marquerLue(n),
                       );
                     },
                   ),

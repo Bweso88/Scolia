@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../config/theme.dart';
+import '../providers/auth_provider.dart';
+import '../config/theme.dart';
 
+/// Les 4 premiers onglets (Accueil, Devoirs, Comportement, Annonces) sont
+/// communs aux deux profils, pour que `indexActuel` reste cohérent partout
+/// dans l'application ; seul le 5e diffère (Notes pour un parent, Ma
+/// classe pour l'enseignant) — docs/PRODUCT_ARCHITECTURE.md §10.
 class BottomNav extends StatelessWidget {
   final int indexActuel;
 
   const BottomNav({super.key, required this.indexActuel});
 
   static const _itemsParent = [
-    (icone: Icons.home_outlined,                     label: 'Accueil',    route: '/accueil'),
-    (icone: Icons.menu_book_outlined,               label: 'Liaison',    route: '/liaison'),
-    (icone: Icons.comment_outlined,                 label: 'Remarques',  route: '/remarques'),
-    (icone: Icons.bar_chart_outlined,               label: 'Notes',      route: '/notes'),
-    (icone: Icons.account_balance_wallet_outlined,  label: 'Frais',      route: '/frais'),
+    (icone: Icons.home_outlined,          label: 'Accueil',    route: '/accueil'),
+    (icone: Icons.assignment_outlined,    label: 'Devoirs',    route: '/devoirs'),
+    (icone: Icons.comment_outlined,       label: 'Comport.',   route: '/remarques'),
+    (icone: Icons.campaign_outlined,      label: 'Annonces',   route: '/liaison'),
+    (icone: Icons.bar_chart_outlined,     label: 'Notes',      route: '/notes'),
   ];
 
-  static const _itemsEnseignant = [
+  static const _itemsPersonnel = [
     (icone: Icons.home_outlined,          label: 'Accueil',    route: '/accueil'),
+    (icone: Icons.assignment_outlined,    label: 'Devoirs',    route: '/devoirs'),
+    (icone: Icons.comment_outlined,       label: 'Comport.',   route: '/remarques'),
+    (icone: Icons.campaign_outlined,      label: 'Annonces',   route: '/liaison'),
     (icone: Icons.groups_outlined,        label: 'Ma classe',  route: '/teacher/ma-classe'),
-    (icone: Icons.menu_book_outlined,     label: 'Liaison',    route: '/liaison'),
-    (icone: Icons.comment_outlined,       label: 'Remarques',  route: '/remarques'),
-    (icone: Icons.calendar_today_outlined,label: 'Calendrier', route: '/calendrier'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    final items = user?.estEnseignant == true ? _itemsEnseignant : _itemsParent;
+    final items = user?.faitPartieDuPersonnel == true ? _itemsPersonnel : _itemsParent;
 
     return NavigationBar(
       selectedIndex: indexActuel,
