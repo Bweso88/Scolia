@@ -1,34 +1,55 @@
+import 'tenant_branding.dart';
+
+class UserClasse {
+  final int id;
+  final String name;
+
+  const UserClasse({required this.id, required this.name});
+
+  factory UserClasse.fromJson(Map<String, dynamic> j) => UserClasse(
+        id:   j['id'] as int,
+        name: j['name'] as String,
+      );
+}
+
 class User {
   final int id;
-  final int ecoleId;
-  final String telephone;
-  final String? prenom;
-  final String? nom;
-  final String role;
-  final bool actif;
+  final String name;
+  final String email;
+  final String? phone;
+  final List<String> roles;
+  final TenantBranding? tenant;
+  final List<UserClasse> classes;
 
   const User({
     required this.id,
-    required this.ecoleId,
-    required this.telephone,
-    this.prenom,
-    this.nom,
-    required this.role,
-    required this.actif,
+    required this.name,
+    required this.email,
+    this.phone,
+    required this.roles,
+    this.tenant,
+    this.classes = const [],
   });
 
   factory User.fromJson(Map<String, dynamic> j) => User(
-        id:        j['id'] as int,
-        ecoleId:   j['ecole_id'] as int,
-        telephone: j['telephone'] as String,
-        prenom:    j['prenom'] as String?,
-        nom:       j['nom'] as String?,
-        role:      j['role'] as String,
-        actif:     j['actif'] == true || j['actif'] == 1,
+        id:    j['id'] as int,
+        name:  j['name'] as String,
+        email: j['email'] as String,
+        phone: j['phone'] as String?,
+        roles: (j['roles'] as List?)?.map((r) => r.toString()).toList() ?? const [],
+        tenant: j['tenant'] is Map ? TenantBranding.fromJson(j['tenant'] as Map<String, dynamic>) : null,
+        classes: (j['classes'] as List?)
+                ?.map((c) => UserClasse.fromJson(c as Map<String, dynamic>))
+                .toList() ??
+            const [],
       );
 
-  String get nomComplet => '${prenom ?? ''} ${nom ?? ''}'.trim();
-  bool get estParent    => role == 'parent';
-  bool get estEnseignant => role == 'teacher';
-  bool get estAdmin     => role == 'school_admin' || role == 'super_admin';
+  bool get estParent      => roles.contains('parent');
+  bool get estEnseignant  => roles.contains('teacher');
+  bool get estAdmin       => roles.contains('school_admin') || roles.contains('direction');
+  bool get estSurveillant => roles.contains('surveillant');
+
+  /// Un enseignant ou un surveillant peut saisir des devoirs, remarques,
+  /// absences ; un parent est en lecture (sauf messagerie et justification).
+  bool get faitPartieDuPersonnel => estEnseignant || estAdmin || estSurveillant;
 }

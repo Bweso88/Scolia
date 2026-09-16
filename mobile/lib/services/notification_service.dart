@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api_service.dart';
@@ -22,7 +24,10 @@ class NotificationService {
   }
 
   static Future<void> enregistrerToken(String token) async {
-    await apiService.post('/notifications/fcm-token', body: {'fcm_token': token});
+    await apiService.post('/devices', body: {
+      'fcm_token': token,
+      'platform': !kIsWeb && Platform.isIOS ? 'ios' : 'android',
+    });
   }
 
   static Future<void> _afficherNotifLocale(RemoteMessage message) async {

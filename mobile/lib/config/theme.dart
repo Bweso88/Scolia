@@ -17,13 +17,20 @@ class AppColors {
   static const light  = Color(0xFFEFF2FA);
 }
 
-ThemeData buildTheme() {
+/// [primary]/[secondary] : couleurs de l'école chargées au runtime depuis
+/// son branding (docs/PRODUCT_ARCHITECTURE.md §16). À défaut (avant
+/// connexion, ou école n'ayant pas personnalisé ses couleurs), on retombe
+/// sur l'identité visuelle par défaut de Scolia.
+ThemeData buildTheme({Color? primary, Color? secondary}) {
+  final couleurPrimaire   = primary ?? AppColors.navy;
+  final couleurSecondaire = secondary ?? AppColors.amber;
+
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.navy,
-      primary: AppColors.navy,
-      secondary: AppColors.amber,
+      seedColor: couleurPrimaire,
+      primary: couleurPrimaire,
+      secondary: couleurSecondaire,
       surface: AppColors.bg,
     ),
     scaffoldBackgroundColor: AppColors.bg,
@@ -32,7 +39,7 @@ ThemeData buildTheme() {
       bodySmall:  GoogleFonts.plusJakartaSans(color: AppColors.muted),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.navy,
+      backgroundColor: couleurPrimaire,
       foregroundColor: AppColors.white,
       elevation: 0,
       titleTextStyle: GoogleFonts.plusJakartaSans(
@@ -52,7 +59,7 @@ ThemeData buildTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.navy,
+        backgroundColor: couleurPrimaire,
         foregroundColor: AppColors.white,
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -72,7 +79,7 @@ ThemeData buildTheme() {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.navy, width: 2),
+        borderSide: BorderSide(color: couleurPrimaire, width: 2),
       ),
     ),
   );

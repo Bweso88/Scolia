@@ -1,39 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/student.dart';
-import '../../services/remarques_service.dart';
+import '../../services/attendance_service.dart';
 import '../../services/student_service.dart';
 
-class NouvelleRemarqueScreen extends StatefulWidget {
+/// Saisie d'une absence/retard par le personnel — déclenche immédiatement
+/// une notification au parent (docs/PRODUCT_ARCHITECTURE.md §6).
+class SaisirAbsenceScreen extends StatefulWidget {
   final int? eleveId;
-  const NouvelleRemarqueScreen({super.key, this.eleveId});
+  const SaisirAbsenceScreen({super.key, this.eleveId});
 
   @override
-  State<NouvelleRemarqueScreen> createState() => _NouvelleRemarqueScreenState();
+  State<SaisirAbsenceScreen> createState() => _SaisirAbsenceScreenState();
 }
 
-class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
-  final _formKey  = GlobalKey<FormState>();
-  final _titreCtrl = TextEditingController();
-  final _descriptionCtrl = TextEditingController();
+class _SaisirAbsenceScreenState extends State<SaisirAbsenceScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _motifCtrl = TextEditingController();
   final _studentService = StudentService();
-  final _remarquesService = RemarquesService();
+  final _attendanceService = AttendanceService();
 
-  String _categorie = 'note_generale';
-  bool _visibleParent = true;
-  int? _eleveSelectionne;
   List<Student> _eleves = [];
+  int? _eleveSelectionne;
+  String _type = 'absence';
+  DateTime _date = DateTime.now();
   bool _charge = false;
-  bool _envoi  = false;
-
-  static const _categories = {
-    'positive':      'Positif',
-    'discipline':    'Discipline',
-    'participation': 'Participation',
-    'incident':      'Incident',
-    'note_generale': 'Observation générale',
-  };
+  bool _envoi = false;
 
   @override
   void initState() {
@@ -44,8 +39,7 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
 
   @override
   void dispose() {
-    _titreCtrl.dispose();
-    _descriptionCtrl.dispose();
+    _motifCtrl.dispose();
     super.dispose();
   }
 
@@ -59,7 +53,17 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
     }
   }
 
-  Future<void> _envoyer() async {
+  Future<void> _choisirDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      lastDate: DateTime.now(),
+    );
+    if (date != null) setState(() => _date = date);
+  }
+
+  Future<void> _enregistrer() async {
     if (!_formKey.currentState!.validate()) return;
     if (_eleveSelectionne == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -69,12 +73,11 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
     }
     setState(() => _envoi = true);
     try {
-      await _remarquesService.creerRemarque({
-        'student_id':  _eleveSelectionne,
-        'category':    _categorie,
-        'title':       _titreCtrl.text.trim(),
-        'description': _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
-        'visible_to_parent': _visibleParent,
+      await _attendanceService.saisirAbsence({
+        'student_id': _eleveSelectionne,
+        'type': _type,
+        'date': DateFormat('yyyy-MM-dd').format(_date),
+        'reason': _motifCtrl.text.trim().isEmpty ? null : _motifCtrl.text.trim(),
       });
       if (mounted) context.pop(true);
     } on Exception catch (e) {
@@ -91,7 +94,7 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle observation')),
+      appBar: AppBar(title: const Text('Signaler une absence')),
       body: _charge
           ? const Center(child: CircularProgressIndicator())
           : Form(
@@ -99,6 +102,7 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     DropdownButtonFormField<int>(
                       value: _eleveSelectionne,
@@ -108,37 +112,32 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
                       validator: (v) => v == null ? 'Sélectionnez un élève' : null,
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: _categorie,
-                      decoration: const InputDecoration(labelText: 'Catégorie'),
-                      items: _categories.entries
-                          .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                          .toList(),
-                      onChanged: (v) => setState(() => _categorie = v!),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'absence', label: Text('Absence')),
+                        ButtonSegment(value: 'retard', label: Text('Retard')),
+                      ],
+                      selected: {_type},
+                      onSelectionChanged: (v) => setState(() => _type = v.first),
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _titreCtrl,
-                      decoration: const InputDecoration(labelText: 'Titre *'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Le titre est requis' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _descriptionCtrl,
-                      decoration: const InputDecoration(labelText: 'Description (facultatif)', alignLabelWithHint: true),
-                      maxLines: 4,
-                    ),
-                    const SizedBox(height: 8),
-                    SwitchListTile(
+                    ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Visible par le parent'),
-                      value: _visibleParent,
-                      onChanged: (v) => setState(() => _visibleParent = v),
-                      activeColor: AppColors.navy,
+                      title: Text('Date', style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.muted)),
+                      subtitle: Text(DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(_date),
+                          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.navy)),
+                      trailing: const Icon(Icons.calendar_today_outlined, color: AppColors.navy),
+                      onTap: _choisirDate,
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _motifCtrl,
+                      decoration: const InputDecoration(labelText: 'Motif (facultatif)'),
+                      maxLines: 2,
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
-                      onPressed: _envoi ? null : _envoyer,
+                      onPressed: _envoi ? null : _enregistrer,
                       child: _envoi
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
                           : const Text('Enregistrer'),
