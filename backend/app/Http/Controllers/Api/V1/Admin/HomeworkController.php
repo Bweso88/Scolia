@@ -8,6 +8,7 @@ use App\Http\Requests\Api\V1\Admin\UpdateHomeworkRequest;
 use App\Http\Resources\Api\V1\HomeworkResource;
 use App\Models\Homework;
 use App\Models\Student;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -31,12 +32,20 @@ class HomeworkController extends Controller
      * pour chaque élève de la classe (voir docs/PRODUCT_ARCHITECTURE.md §7,
      * table homework_status) — c'est ce qui alimente les vues "à faire" /
      * "en retard" côté parent.
+     *
+     * Un enseignant publie toujours en son propre nom ; seule
+     * l'administration peut publier un devoir pour un autre enseignant en
+     * précisant teacher_id.
      */
     public function store(StoreHomeworkRequest $request)
     {
         $homework = DB::transaction(function () use ($request) {
+            $teacherId = $request->validated('teacher_id')
+                ?? Teacher::where('user_id', $request->user()->id)->value('id');
+
             $homework = Homework::create([
                 ...$request->validated(),
+                'teacher_id' => $teacherId,
                 'published_at' => now(),
             ]);
 

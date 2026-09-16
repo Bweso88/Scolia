@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Api\V1\Admin;
 
 use App\Models\Homework;
-use App\Models\Teacher;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,18 +29,5 @@ class StoreHomeworkRequest extends FormRequest
             'instructions' => ['nullable', 'string'],
             'due_date' => ['required', 'date', 'after_or_equal:today'],
         ];
-    }
-
-    /**
-     * Un enseignant publie toujours en son propre nom ; seule
-     * l'administration peut publier un devoir pour un autre enseignant.
-     */
-    protected function passedValidation(): void
-    {
-        if (! $this->filled('teacher_id')) {
-            $teacher = Teacher::where('user_id', $this->user()->id)->first();
-
-            $this->merge(['teacher_id' => $teacher?->id]);
-        }
     }
 }
