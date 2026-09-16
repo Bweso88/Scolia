@@ -6,7 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Admin\StoreAnnouncementRequest;
 use App\Http\Resources\Api\V1\AnnouncementResource;
 use App\Models\Announcement;
+use App\Models\User;
+use App\Notifications\NewAnnouncementNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class AnnouncementController extends Controller
 {
@@ -55,6 +59,8 @@ class AnnouncementController extends Controller
             return $announcement;
         });
 
+        Notification::send($this->resolveRecipients($announcement), new NewAnnouncementNotification($announcement));
+
         return new AnnouncementResource($announcement->load('author'));
     }
 
@@ -63,5 +69,21 @@ class AnnouncementController extends Controller
         $this->authorize('view', $announcement);
 
         return new AnnouncementResource($announcement->load('author', 'targets'));
+    }
+
+    private function resolveRecipients(Announcement $announcement): Collection
+    {
+        $recipients = collect();
+
+        foreach ($announcement->targets as $target) {
+            $recipients = $recipients->merge(match ($target->target_type) {
+                'all' => User::where('tenant_id', $announcement->tenant_id)->get(),
+                'user' => User::where('id', $target->target_id)->get(),
+                'school_class' => User::whereHas('students', fn ($q) => $q->where('school_class_id', $target->target_id))->get(),
+                default => collect(),
+            });
+        }
+
+        return $recipients->unique('id');
     }
 }

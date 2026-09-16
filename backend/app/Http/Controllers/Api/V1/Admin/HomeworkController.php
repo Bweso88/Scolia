@@ -9,8 +9,11 @@ use App\Http\Resources\Api\V1\HomeworkResource;
 use App\Models\Homework;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\User;
+use App\Notifications\NewHomeworkNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class HomeworkController extends Controller
 {
@@ -59,6 +62,9 @@ class HomeworkController extends Controller
 
             return $homework;
         });
+
+        $guardians = User::whereHas('students', fn ($q) => $q->whereIn('students.id', $homework->statuses()->pluck('student_id')))->get();
+        Notification::send($guardians, new NewHomeworkNotification($homework));
 
         return new HomeworkResource($homework->load(['subject', 'schoolClass', 'teacher.user']));
     }

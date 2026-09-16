@@ -52,4 +52,19 @@ class Tenant extends Model
     {
         return $this->hasMany(SchoolClass::class);
     }
+
+    public function subscriptionModules(): HasMany
+    {
+        return $this->hasMany(SubscriptionModule::class);
+    }
+
+    /**
+     * Un module est actif par défaut tant que l'école ne l'a pas
+     * explicitement désactivé (docs/PRODUCT_ARCHITECTURE.md §4 et §18) —
+     * seule une ligne subscription_modules avec is_enabled=false le coupe.
+     */
+    public function isModuleEnabled(string $key): bool
+    {
+        return $this->subscriptionModules()->where('module_key', $key)->value('is_enabled') ?? true;
+    }
 }

@@ -4,6 +4,9 @@ use App\Http\Controllers\Api\V1\Admin\AnnouncementController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceRecordController;
 use App\Http\Controllers\Api\V1\Admin\BehaviorObservationController;
 use App\Http\Controllers\Api\V1\Admin\ConversationController;
+use App\Http\Controllers\Api\V1\Admin\DocumentController;
+use App\Http\Controllers\Api\V1\Admin\GradeController;
+use App\Http\Controllers\Api\V1\Admin\GradingPeriodController;
 use App\Http\Controllers\Api\V1\Admin\HomeworkController;
 use App\Http\Controllers\Api\V1\Admin\MessageController;
 use App\Http\Controllers\Api\V1\Admin\MessagingPermissionController;
@@ -49,4 +52,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::patch('teachers/{teacher}/messaging-permission', [MessagingPermissionController::class, 'update'])
         ->name('teachers.messaging-permission.update');
+
+    Route::apiResource('documents', DocumentController::class)
+        ->only(['index', 'store', 'show', 'destroy']);
+
+    Route::apiResource('grading-periods', GradingPeriodController::class)
+        ->only(['index', 'store']);
+    Route::apiResource('grades', GradeController::class)
+        ->only(['index', 'store', 'update']);
 });

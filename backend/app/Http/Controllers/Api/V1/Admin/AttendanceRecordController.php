@@ -8,7 +8,9 @@ use App\Http\Requests\Api\V1\Admin\ReviewAttendanceJustificationRequest;
 use App\Http\Requests\Api\V1\Admin\StoreAttendanceRecordRequest;
 use App\Http\Resources\Api\V1\AttendanceRecordResource;
 use App\Models\AttendanceRecord;
+use App\Notifications\AbsenceRecordedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class AttendanceRecordController extends Controller
 {
@@ -35,6 +37,8 @@ class AttendanceRecordController extends Controller
             ...$request->validated(),
             'recorded_by_user_id' => $request->user()->id,
         ]);
+
+        Notification::send($record->student->guardians, new AbsenceRecordedNotification($record));
 
         return new AttendanceRecordResource($record);
     }
