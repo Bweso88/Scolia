@@ -23,6 +23,31 @@ workflows:
     artifacts:
       - mobile/build/app/outputs/flutter-apk/*.apk
 
+  android-apk-debug:
+    name: Scolia - Android APK (debug, diagnostic)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.35.5
+      groups:
+        - production
+    scripts:
+      - name: Récupérer les dépendances Flutter
+        script: |
+          cd mobile
+          flutter pub get
+      - name: >
+          Compiler l'APK en mode debug — contrairement au build release,
+          celui-ci affiche l'écran d'erreur rouge complet (message +
+          pile d'appels) au lieu d'un écran blanc quand un widget plante,
+          pour diagnostiquer le bug d'enregistrement (voir échanges avec
+          l'utilisateur, sept. 2026).
+        script: |
+          cd mobile
+          flutter build apk --debug --dart-define=API_BASE_URL=$API_BASE_URL
+    artifacts:
+      - mobile/build/app/outputs/flutter-apk/*.apk
+
   ios-unsigned:
     name: Scolia - iOS non signé (pour Sideloadly)
     max_build_duration: 30
