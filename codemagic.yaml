@@ -1,0 +1,48 @@
+workflows:
+  android-apk:
+    name: Scolia - Android APK (test)
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+      vars:
+        API_BASE_URL: "https://votre-backend.example.com/api/v1"
+    scripts:
+      - name: Récupérer les dépendances Flutter
+        script: |
+          cd mobile
+          flutter pub get
+      - name: Compiler l'APK (release, signé avec la clé de debug — suffisant pour un test par sideload, pas pour le Play Store)
+        script: |
+          cd mobile
+          flutter build apk --release --dart-define=API_BASE_URL=$API_BASE_URL
+    artifacts:
+      - mobile/build/app/outputs/flutter-apk/*.apk
+
+  ios-unsigned:
+    name: Scolia - iOS non signé (pour Sideloadly)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      vars:
+        API_BASE_URL: "https://votre-backend.example.com/api/v1"
+    scripts:
+      - name: Récupérer les dépendances Flutter
+        script: |
+          cd mobile
+          flutter pub get
+      - name: Compiler iOS sans signature (aucun compte développeur Apple requis à ce stade)
+        script: |
+          cd mobile
+          flutter build ios --release --no-codesign --dart-define=API_BASE_URL=$API_BASE_URL
+      - name: Empaqueter en .ipa non signé (Sideloadly le signera avec un identifiant Apple gratuit)
+        script: |
+          cd mobile
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r ../../../Runner-unsigned.ipa Payload
+    artifacts:
+      - mobile/Runner-unsigned.ipa
