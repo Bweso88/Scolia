@@ -19,7 +19,20 @@ class Student extends Model
 
     protected function casts(): array
     {
-        return ['birth_date' => 'date'];
+        return [
+            'birth_date' => 'date',
+            'activated_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * Simule l'activation payante par enfant (docs/PRODUCT_ARCHITECTURE.md
+     * §18 : la vraie facturation reste hors MVP) : un enfant non activé
+     * n'est visible pour son parent que dans la liste, jamais en détail.
+     */
+    public function isActivated(): bool
+    {
+        return $this->activated_at !== null;
     }
 
     public function schoolClass(): BelongsTo

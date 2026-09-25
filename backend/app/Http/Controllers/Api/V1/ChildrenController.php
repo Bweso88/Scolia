@@ -35,9 +35,25 @@ class ChildrenController extends Controller
         return StudentResource::collection($children);
     }
 
-    public function dashboard(Student $student)
+    /**
+     * Simule l'activation payante par enfant (docs/PRODUCT_ARCHITECTURE.md
+     * §18) : un parent voit toujours ses enfants dans la liste (index),
+     * mais aucun détail tant que l'enfant n'est pas activé. Le personnel
+     * de l'école n'est jamais bloqué par cette vérification.
+     */
+    private function ensureActivatedForParent(Request $request, Student $student): void
+    {
+        abort_if(
+            $request->user()->hasRole('parent') && ! $student->isActivated(),
+            403,
+            "Cet enfant n'est pas encore activé. Contactez l'administration de l'école."
+        );
+    }
+
+    public function dashboard(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
 
         $today = today();
 
@@ -76,6 +92,7 @@ class ChildrenController extends Controller
     public function homeworks(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
 
         $today = today();
 
@@ -92,9 +109,10 @@ class ChildrenController extends Controller
         return HomeworkResource::collection($query->orderBy('due_date')->get());
     }
 
-    public function behavior(Student $student)
+    public function behavior(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
 
         $observations = BehaviorObservation::where('student_id', $student->id)
             ->where('visible_to_parent', true)
@@ -105,9 +123,10 @@ class ChildrenController extends Controller
         return BehaviorObservationResource::collection($observations);
     }
 
-    public function attendance(Student $student)
+    public function attendance(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
 
         $records = AttendanceRecord::where('student_id', $student->id)
             ->with('justification')
@@ -117,9 +136,10 @@ class ChildrenController extends Controller
         return AttendanceRecordResource::collection($records);
     }
 
-    public function timetable(Student $student)
+    public function timetable(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
 
         $slots = TimetableSlot::where('school_class_id', $student->school_class_id)
             ->with(['subject', 'teacher.user'])
@@ -134,9 +154,10 @@ class ChildrenController extends Controller
      * Le module notes/bulletins est activable/désactivable par école
      * (docs/PRODUCT_ARCHITECTURE.md §4 et §18) sans changement de code.
      */
-    public function grades(Student $student)
+    public function grades(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
         abort_unless($student->tenant->isModuleEnabled('notes'), 403, "Le module notes n'est pas activé pour cette école.");
 
         $grades = $student->grades()->with(['subject', 'gradingPeriod'])->orderByDesc('created_at')->paginate();
@@ -144,9 +165,10 @@ class ChildrenController extends Controller
         return GradeResource::collection($grades);
     }
 
-    public function announcements(Student $student)
+    public function announcements(Request $request, Student $student)
     {
         $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
 
         $announcements = AnnouncementResource::collection(
             Announcement::whereHas('targets', function ($q) use ($student) {

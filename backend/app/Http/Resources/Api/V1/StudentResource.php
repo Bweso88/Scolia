@@ -17,6 +17,7 @@ class StudentResource extends JsonResource
             'gender' => $this->gender,
             'enrollment_number' => $this->enrollment_number,
             'status' => $this->status,
+            'is_activated' => $this->isActivated(),
             'school_class' => [
                 'id' => $this->schoolClass->id,
                 'name' => $this->schoolClass->name,

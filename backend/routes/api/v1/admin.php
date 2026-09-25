@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Admin\GradingPeriodController;
 use App\Http\Controllers\Api\V1\Admin\HomeworkController;
 use App\Http\Controllers\Api\V1\Admin\MessageController;
 use App\Http\Controllers\Api\V1\Admin\MessagingPermissionController;
+use App\Http\Controllers\Api\V1\Admin\StudentActivationController;
 use App\Http\Controllers\Api\V1\Admin\StudentController;
 use App\Http\Controllers\Api\V1\Admin\SubjectController;
 use App\Http\Controllers\Api\V1\Admin\TimetableSlotController;
@@ -27,6 +28,8 @@ use Illuminate\Support\Facades\Route;
 */
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::apiResource('students', StudentController::class);
+    Route::patch('students/{student}/activation', [StudentActivationController::class, 'update'])
+        ->name('students.activation');
     Route::apiResource('homeworks', HomeworkController::class);
 
     Route::apiResource('behavior-observations', BehaviorObservationController::class)

@@ -22,6 +22,17 @@ class StudentFactory extends Factory
             'birth_date' => fake()->dateTimeBetween('-12 years', '-6 years'),
             'gender' => fake()->randomElement(['m', 'f']),
             'status' => 'active',
+            'activated_at' => now(),
         ];
+    }
+
+    /**
+     * Enfant dont l'abonnement n'a pas (encore) été activé par le parent
+     * (docs/PRODUCT_ARCHITECTURE.md §18) : utile pour tester la
+     * restriction d'accès côté parent.
+     */
+    public function inactive(): static
+    {
+        return $this->state(['activated_at' => null]);
     }
 }
