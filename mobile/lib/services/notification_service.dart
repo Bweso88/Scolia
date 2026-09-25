@@ -14,13 +14,22 @@ class NotificationService {
       const InitializationSettings(android: android, iOS: ios),
     );
 
-    FirebaseMessaging.onMessage.listen(_afficherNotifLocale);
-    FirebaseMessaging.onMessageOpenedApp.listen(_gererOuverture);
-    FirebaseMessaging.onBackgroundMessage(_gererEnArrierePlan);
+    // Sans projet Firebase configuré, Firebase.initializeApp() a déjà
+    // échoué silencieusement (voir main.dart) : ces appels lèveraient
+    // alors une exception à chaque démarrage.
+    try {
+      FirebaseMessaging.onMessage.listen(_afficherNotifLocale);
+      FirebaseMessaging.onMessageOpenedApp.listen(_gererOuverture);
+      FirebaseMessaging.onBackgroundMessage(_gererEnArrierePlan);
+    } catch (_) {}
   }
 
   static Future<String?> getToken() async {
-    return FirebaseMessaging.instance.getToken();
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> enregistrerToken(String token) async {

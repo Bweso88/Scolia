@@ -4,6 +4,12 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {
+    // Aucun projet Firebase configuré (pas de google-services.json /
+    // GoogleService-Info.plist) : les notifications push resteront
+    // indisponibles, mais le reste de l'application doit rester utilisable.
+  }
   runApp(const ScoliaApp());
 }

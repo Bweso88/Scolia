@@ -9,10 +9,7 @@ class ApiService {
     headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
   ))..interceptors.add(LogInterceptor(responseBody: false));
 
-  String? _token;
-
   void setToken(String? token) {
-    _token = token;
     if (token != null) {
       _dio.options.headers['Authorization'] = 'Bearer $token';
     } else {
