@@ -4,7 +4,11 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m2
     environment:
-      flutter: stable
+      # Épinglé (pas "stable") : le projet a été scaffoldé (flutter
+      # create) avec cette version exacte. Une version plus récente peut
+      # embarquer un Flutter Gradle plugin qui force AGP 9+, incompatible
+      # avec le DSL de nos android/*.gradle.kts générés avec AGP 8.9.1.
+      flutter: 3.35.5
       groups:
         - production
     scripts:
@@ -24,7 +28,7 @@ workflows:
     max_build_duration: 30
     instance_type: mac_mini_m2
     environment:
-      flutter: stable
+      flutter: 3.35.5
       xcode: latest
       groups:
         - production
