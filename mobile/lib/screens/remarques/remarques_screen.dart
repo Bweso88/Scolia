@@ -9,6 +9,7 @@ import '../../services/children_service.dart';
 import '../../services/remarques_service.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
+import '../../widgets/animated_entry.dart';
 import '../../widgets/remarque_card.dart';
 import '../../widgets/empty_state.dart';
 
@@ -104,7 +105,7 @@ class _RemarquesScreenState extends State<RemarquesScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           itemCount: _remarques.length,
-                          itemBuilder: (_, i) => RemarqueCard(remarque: _remarques[i]),
+                          itemBuilder: (_, i) => AnimatedEntry(index: i, child: RemarqueCard(remarque: _remarques[i])),
                         ),
             ),
           ),

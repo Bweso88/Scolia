@@ -1,6 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Transition fondu + léger glissement vers le haut, appliquée à toute
+/// navigation (GoRouter) sans devoir toucher chaque route une à une — le
+/// rendu par défaut de Flutter (slide latéral abrupt sur Android) donnait
+/// une impression "statique" à l'app.
+class _FadeThroughTransitionsBuilder extends PageTransitionsBuilder {
+  const _FadeThroughTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final courbe = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: courbe,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(courbe),
+        child: child,
+      ),
+    );
+  }
+}
+
 class AppColors {
   static const navy   = Color(0xFF0D1B3E);
   static const amber  = Color(0xFFF5A623);
@@ -48,14 +74,13 @@ ThemeData buildTheme({Color? primary, Color? secondary}) {
         fontWeight: FontWeight.w600,
       ),
     ),
-    cardTheme: const CardThemeData(
+    cardTheme: CardThemeData(
       color: AppColors.white,
       surfaceTintColor: AppColors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-        side: BorderSide(color: AppColors.border),
-      ),
+      elevation: 4,
+      shadowColor: AppColors.navy.withOpacity(0.10),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -70,17 +95,23 @@ ThemeData buildTheme({Color? primary, Color? secondary}) {
       filled: true,
       fillColor: AppColors.white,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: couleurPrimaire, width: 2),
       ),
+    ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: _FadeThroughTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      },
     ),
   );
   return base;

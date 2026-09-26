@@ -10,6 +10,7 @@ import '../../services/children_service.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
 import '../../widgets/announcement_card.dart';
+import '../../widgets/animated_entry.dart';
 import '../../widgets/empty_state.dart';
 
 /// Annonces de l'école (docs/PRODUCT_ARCHITECTURE.md §8) : le cahier de
@@ -105,7 +106,7 @@ class _LiaisonScreenState extends State<LiaisonScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           itemCount: _annonces.length,
-                          itemBuilder: (_, i) => AnnouncementCard(announcement: _annonces[i]),
+                          itemBuilder: (_, i) => AnimatedEntry(index: i, child: AnnouncementCard(announcement: _annonces[i])),
                         ),
             ),
           ),
