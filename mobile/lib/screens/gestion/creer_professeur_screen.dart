@@ -6,6 +6,7 @@ import '../../models/school_class_admin.dart';
 import '../../models/teacher_admin.dart';
 import '../../services/gestion_service.dart';
 import '../../services/reference_service.dart';
+import '../../widgets/success_toast.dart';
 
 /// Création ou modification d'un professeur, avec ses affectations
 /// classe/matière (docs/PRODUCT_ARCHITECTURE.md §15).
@@ -91,7 +92,10 @@ class _CreerProfesseurScreenState extends State<CreerProfesseurScreen> {
           'assignments': assignments,
         });
       }
-      if (mounted) context.pop(true);
+      if (mounted) {
+        showSuccessToast(context, _modification ? 'Professeur modifié.' : 'Professeur créé.');
+        context.pop(true);
+      }
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -8,6 +8,7 @@ import '../../models/student.dart';
 import '../../services/notes_service.dart';
 import '../../services/reference_service.dart';
 import '../../services/student_service.dart';
+import '../../widgets/success_toast.dart';
 
 class SaisirNoteScreen extends StatefulWidget {
   final int? eleveId;
@@ -98,7 +99,7 @@ class _SaisirNoteScreenState extends State<SaisirNoteScreen> {
         'comment':           _commentCtrl.text.trim().isEmpty ? null : _commentCtrl.text.trim(),
       });
       if (mounted) {
-        _snack('Note enregistrée.', AppColors.green);
+        showSuccessToast(context, 'Note enregistrée.');
         context.pop();
       }
     } on Exception catch (e) {

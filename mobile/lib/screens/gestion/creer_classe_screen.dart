@@ -5,6 +5,7 @@ import '../../models/school_class_admin.dart';
 import '../../models/school_year_ref.dart';
 import '../../models/teacher_admin.dart';
 import '../../services/gestion_service.dart';
+import '../../widgets/success_toast.dart';
 
 /// Création ou modification d'une classe (docs/PRODUCT_ARCHITECTURE.md §15).
 class CreerClasseScreen extends StatefulWidget {
@@ -78,7 +79,10 @@ class _CreerClasseScreenState extends State<CreerClasseScreen> {
       } else {
         await _service.creerClasse(corps);
       }
-      if (mounted) context.pop(true);
+      if (mounted) {
+        showSuccessToast(context, _modification ? 'Classe modifiée.' : 'Classe créée.');
+        context.pop(true);
+      }
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

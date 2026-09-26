@@ -7,6 +7,7 @@ import '../../models/messaging_contact.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/child_provider.dart';
 import '../../services/messaging_service.dart';
+import '../../widgets/success_toast.dart';
 
 /// Un parent choisit l'enfant concerné puis un destinataire (le professeur
 /// de sa classe, ou la direction) — docs/PRODUCT_ARCHITECTURE.md §7. La
@@ -86,7 +87,10 @@ class _NouvelleConversationScreenState extends State<NouvelleConversationScreen>
         subject: _sujetCtrl.text.trim(),
         studentId: _enfantId,
       );
-      if (mounted) context.pop(true);
+      if (mounted) {
+        showSuccessToast(context, 'Message envoyé.');
+        context.pop(true);
+      }
     } on Exception catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''), AppColors.red);
     } finally {

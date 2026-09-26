@@ -4,6 +4,7 @@ import '../../config/theme.dart';
 import '../../models/matiere.dart';
 import '../../services/reference_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/success_toast.dart';
 
 class MatieresScreen extends StatefulWidget {
   const MatieresScreen({super.key});
@@ -49,6 +50,7 @@ class _MatieresScreenState extends State<MatieresScreen> {
     if (nom == null || nom.isEmpty) return;
     try {
       await _service.creerMatiere(nom);
+      if (mounted) showSuccessToast(context, 'Matière ajoutée.');
       _charger();
     } on Exception catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));

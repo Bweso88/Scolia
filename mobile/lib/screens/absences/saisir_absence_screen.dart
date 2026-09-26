@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/student.dart';
 import '../../services/attendance_service.dart';
 import '../../services/student_service.dart';
+import '../../widgets/success_toast.dart';
 
 /// Saisie d'une absence/retard par le personnel — déclenche immédiatement
 /// une notification au parent (docs/PRODUCT_ARCHITECTURE.md §6).
@@ -79,7 +80,10 @@ class _SaisirAbsenceScreenState extends State<SaisirAbsenceScreen> {
         'date': DateFormat('yyyy-MM-dd').format(_date),
         'reason': _motifCtrl.text.trim().isEmpty ? null : _motifCtrl.text.trim(),
       });
-      if (mounted) context.pop(true);
+      if (mounted) {
+        showSuccessToast(context, 'Absence enregistrée.');
+        context.pop(true);
+      }
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

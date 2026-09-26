@@ -7,6 +7,7 @@ import '../../models/student.dart';
 import '../../models/student_guardian.dart';
 import '../../services/gestion_service.dart';
 import '../../services/student_service.dart';
+import '../../widgets/success_toast.dart';
 
 /// Création ou modification d'un élève, avec ses parents/tuteurs
 /// (docs/PRODUCT_ARCHITECTURE.md §15) — la liaison aux parents n'est
@@ -85,7 +86,10 @@ class _CreerEleveScreenState extends State<CreerEleveScreen> {
       } else {
         await _studentService.creerEleve(corps);
       }
-      if (mounted) context.pop(true);
+      if (mounted) {
+        showSuccessToast(context, _modification ? 'Élève modifié.' : 'Élève créé.');
+        context.pop(true);
+      }
     } on Exception catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -152,6 +156,7 @@ class _CreerEleveScreenState extends State<CreerEleveScreen> {
         'password': mdpCtrl.text,
         'relationship_type': lien,
       });
+      if (mounted) showSuccessToast(context, 'Parent lié à l\'élève.');
       _charger();
     } on Exception catch (e) {
       _snack(e.toString().replaceFirst('Exception: ', ''));

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/announcement_service.dart';
+import '../../widgets/success_toast.dart';
 
 /// Publication d'une annonce par le personnel, ciblée sur toute l'école ou
 /// une classe précise (docs/PRODUCT_ARCHITECTURE.md §8).
@@ -53,9 +54,7 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
             : [{'target_type': 'school_class', 'target_id': _classeCiblee}],
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Annonce publiée.'), backgroundColor: AppColors.green),
-        );
+        showSuccessToast(context, 'Annonce publiée.');
         context.pop(true);
       }
     } on Exception catch (e) {

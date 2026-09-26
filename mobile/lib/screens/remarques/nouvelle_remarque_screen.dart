@@ -4,6 +4,7 @@ import '../../config/theme.dart';
 import '../../models/student.dart';
 import '../../services/remarques_service.dart';
 import '../../services/student_service.dart';
+import '../../widgets/success_toast.dart';
 
 class NouvelleRemarqueScreen extends StatefulWidget {
   final int? eleveId;
@@ -76,7 +77,10 @@ class _NouvelleRemarqueScreenState extends State<NouvelleRemarqueScreen> {
         'description': _descriptionCtrl.text.trim().isEmpty ? null : _descriptionCtrl.text.trim(),
         'visible_to_parent': _visibleParent,
       });
-      if (mounted) context.pop(true);
+      if (mounted) {
+        showSuccessToast(context, 'Observation enregistrée.');
+        context.pop(true);
+      }
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
