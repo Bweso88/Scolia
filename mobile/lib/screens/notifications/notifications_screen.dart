@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
+import '../../providers/notifications_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../models/notification_app.dart';
 import '../../services/notification_service_api.dart';
@@ -34,6 +36,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _notifications = resultat.notifications;
         _nbNonLues = resultat.nonLues;
       });
+      if (mounted) context.read<NotificationsProvider>().charger();
     } catch (_) {
     } finally {
       if (mounted) setState(() => _charge = false);
@@ -57,7 +60,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   static const _icones = {
     'homework':     Icons.assignment_outlined,
+    'behavior':     Icons.comment_outlined,
     'attendance':   Icons.event_busy_outlined,
+    'grade':        Icons.bar_chart_outlined,
     'conversation': Icons.forum_outlined,
     'announcement': Icons.campaign_outlined,
   };

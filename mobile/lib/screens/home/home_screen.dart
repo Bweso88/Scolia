@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/child_provider.dart';
+import '../../providers/notifications_provider.dart';
 import '../../config/theme.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
@@ -31,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _charger() async {
+    context.read<NotificationsProvider>().charger();
+
     final user = context.read<AuthProvider>().user;
     if (user?.estParent != true) return;
 
@@ -98,9 +101,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: AppColors.white),
-            onPressed: () => context.push('/notifications'),
+          Builder(
+            builder: (context) {
+              final nonLues = context.watch<NotificationsProvider>().nonLues;
+              return IconButton(
+                icon: Badge(
+                  isLabelVisible: nonLues > 0,
+                  label: Text('$nonLues'),
+                  backgroundColor: AppColors.amber,
+                  child: const Icon(Icons.notifications_outlined, color: AppColors.white),
+                ),
+                onPressed: () => context.push('/notifications'),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.person_outline, color: AppColors.white),

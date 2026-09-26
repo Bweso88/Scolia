@@ -18,10 +18,12 @@ class _PreferencesNotificationsScreenState extends State<PreferencesNotification
   bool _charge = false;
 
   static const _categories = {
-    'devoir':   ('Nouveaux devoirs', Icons.assignment_outlined),
-    'absence':  ('Absences et retards', Icons.event_busy_outlined),
-    'message':  ('Messages', Icons.forum_outlined),
-    'annonce':  ('Annonces de l\'école', Icons.campaign_outlined),
+    'devoir':       ('Nouveaux devoirs', Icons.assignment_outlined),
+    'comportement': ('Observations de comportement', Icons.comment_outlined),
+    'absence':      ('Absences et retards', Icons.event_busy_outlined),
+    'note':         ('Nouvelles notes', Icons.bar_chart_outlined),
+    'message':      ('Messages', Icons.forum_outlined),
+    'annonce':      ('Annonces de l\'école', Icons.campaign_outlined),
   };
 
   @override

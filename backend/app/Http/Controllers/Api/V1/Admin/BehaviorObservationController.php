@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Admin\StoreBehaviorObservationRequest;
 use App\Http\Resources\Api\V1\BehaviorObservationResource;
 use App\Models\BehaviorObservation;
+use App\Notifications\NewBehaviorObservationNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class BehaviorObservationController extends Controller
 {
@@ -37,6 +39,10 @@ class BehaviorObservationController extends Controller
             'occurred_at' => $request->validated('occurred_at') ?? now(),
             'visible_to_parent' => $request->validated('visible_to_parent') ?? true,
         ]);
+
+        if ($observation->visible_to_parent) {
+            Notification::send($observation->student->guardians, new NewBehaviorObservationNotification($observation));
+        }
 
         return new BehaviorObservationResource($observation->load('author'));
     }

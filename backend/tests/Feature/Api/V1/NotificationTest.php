@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\V1;
 
 use App\Models\AttendanceRecord;
+use App\Models\GradingPeriod;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\Subject;
@@ -11,6 +12,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Notifications\AbsenceRecordedNotification;
 use App\Notifications\Channels\FcmChannel;
+use App\Notifications\NewBehaviorObservationNotification;
+use App\Notifications\NewGradeNotification;
 use App\Notifications\NewHomeworkNotification;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -84,6 +87,95 @@ class NotificationTest extends TestCase
             ->assertCreated();
 
         Notification::assertSentTo($parent, AbsenceRecordedNotification::class);
+    }
+
+    public function test_adding_a_behavior_observation_notifies_the_students_guardian(): void
+    {
+        Notification::fake();
+
+        $tenant = Tenant::factory()->create();
+        app(PermissionRegistrar::class)->setPermissionsTeamId($tenant->id);
+
+        $teacherUser = User::factory()->for($tenant)->create();
+        $teacherUser->assignRole('teacher');
+
+        $class = SchoolClass::factory()->for($tenant)->create();
+        $student = Student::factory()->for($tenant)->for($class, 'schoolClass')->create();
+
+        $parent = User::factory()->for($tenant)->create();
+        $parent->assignRole('parent');
+        $student->guardians()->attach($parent->id, ['tenant_id' => $tenant->id, 'relationship_type' => 'parent']);
+
+        $this->actingAs($teacherUser, 'sanctum')
+            ->postJson('/api/v1/admin/behavior-observations', [
+                'student_id' => $student->id,
+                'category' => 'positive',
+                'title' => 'Très bonne participation',
+            ])
+            ->assertCreated();
+
+        Notification::assertSentTo($parent, NewBehaviorObservationNotification::class);
+    }
+
+    public function test_a_behavior_observation_hidden_from_parents_does_not_notify_them(): void
+    {
+        Notification::fake();
+
+        $tenant = Tenant::factory()->create();
+        app(PermissionRegistrar::class)->setPermissionsTeamId($tenant->id);
+
+        $teacherUser = User::factory()->for($tenant)->create();
+        $teacherUser->assignRole('teacher');
+
+        $class = SchoolClass::factory()->for($tenant)->create();
+        $student = Student::factory()->for($tenant)->for($class, 'schoolClass')->create();
+
+        $parent = User::factory()->for($tenant)->create();
+        $parent->assignRole('parent');
+        $student->guardians()->attach($parent->id, ['tenant_id' => $tenant->id, 'relationship_type' => 'parent']);
+
+        $this->actingAs($teacherUser, 'sanctum')
+            ->postJson('/api/v1/admin/behavior-observations', [
+                'student_id' => $student->id,
+                'category' => 'discipline',
+                'title' => 'Note interne',
+                'visible_to_parent' => false,
+            ])
+            ->assertCreated();
+
+        Notification::assertNotSentTo($parent, NewBehaviorObservationNotification::class);
+    }
+
+    public function test_entering_a_grade_notifies_the_students_guardian(): void
+    {
+        Notification::fake();
+
+        $tenant = Tenant::factory()->create();
+        app(PermissionRegistrar::class)->setPermissionsTeamId($tenant->id);
+
+        $admin = User::factory()->for($tenant)->create();
+        $admin->assignRole('school_admin');
+
+        $class = SchoolClass::factory()->for($tenant)->create();
+        $subject = Subject::factory()->for($tenant)->create();
+        $gradingPeriod = GradingPeriod::factory()->for($tenant)->create();
+        $student = Student::factory()->for($tenant)->for($class, 'schoolClass')->create();
+
+        $parent = User::factory()->for($tenant)->create();
+        $parent->assignRole('parent');
+        $student->guardians()->attach($parent->id, ['tenant_id' => $tenant->id, 'relationship_type' => 'parent']);
+
+        $this->actingAs($admin, 'sanctum')
+            ->postJson('/api/v1/admin/grades', [
+                'student_id' => $student->id,
+                'subject_id' => $subject->id,
+                'grading_period_id' => $gradingPeriod->id,
+                'score' => 15,
+                'max_score' => 20,
+            ])
+            ->assertCreated();
+
+        Notification::assertSentTo($parent, NewGradeNotification::class);
     }
 
     public function test_disabling_push_for_a_category_keeps_the_database_channel_only(): void

@@ -7,6 +7,12 @@ import 'api_service.dart';
 class NotificationService {
   static final _localNotifications = FlutterLocalNotificationsPlugin();
 
+  /// Branché depuis app.dart pour rafraîchir le badge de la cloche
+  /// (NotificationsProvider) dès qu'un message arrive au premier plan,
+  /// sans coupler ce service (statique, sans accès au Provider) au reste
+  /// de l'arbre de widgets.
+  static void Function()? onMessageReceived;
+
   static Future<void> initialiser() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios     = DarwinInitializationSettings();
@@ -54,6 +60,7 @@ class NotificationService {
       message.notification?.body,
       details,
     );
+    onMessageReceived?.call();
   }
 
   static void _gererOuverture(RemoteMessage message) {

@@ -7,7 +7,9 @@ use App\Http\Requests\Api\V1\Admin\StoreGradeRequest;
 use App\Http\Requests\Api\V1\Admin\UpdateGradeRequest;
 use App\Http\Resources\Api\V1\GradeResource;
 use App\Models\Grade;
+use App\Notifications\NewGradeNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class GradeController extends Controller
 {
@@ -30,6 +32,8 @@ class GradeController extends Controller
             ...$request->validated(),
             'entered_by_user_id' => $request->user()->id,
         ]);
+
+        Notification::send($grade->student->guardians, new NewGradeNotification($grade));
 
         return new GradeResource($grade->load(['subject', 'gradingPeriod']));
     }

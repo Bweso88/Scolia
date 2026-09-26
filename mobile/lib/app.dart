@@ -4,6 +4,7 @@ import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/child_provider.dart';
+import 'providers/notifications_provider.dart';
 import 'services/notification_service.dart';
 
 class ScoliaApp extends StatefulWidget {
@@ -29,9 +30,17 @@ class _ScoliaAppState extends State<ScoliaApp> {
           create: (_) => ChildProvider(),
           update: (_, auth, enfants) => enfants!..mettreAJourToken(auth.token),
         ),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationsProvider>(
+          create: (_) => NotificationsProvider(),
+          update: (_, auth, notifs) {
+            if (auth.estConnecte) notifs!.charger();
+            return notifs!;
+          },
+        ),
       ],
       child: Builder(
         builder: (context) {
+          NotificationService.onMessageReceived ??= () => context.read<NotificationsProvider>().charger();
           final router = buildRouter(context);
           // Couleurs de l'école connectée appliquées à l'ensemble de
           // l'application (docs/PRODUCT_ARCHITECTURE.md §16) ; à défaut
