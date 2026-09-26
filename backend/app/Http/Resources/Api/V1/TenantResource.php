@@ -26,6 +26,7 @@ class TenantResource extends JsonResource
             'phone' => $settings?->phone,
             'email' => $settings?->email,
             'address' => $settings?->address,
+            'messaging_cutoff_time' => $settings?->messaging_cutoff_time,
         ];
     }
 }

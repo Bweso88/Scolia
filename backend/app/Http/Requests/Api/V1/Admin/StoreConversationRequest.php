@@ -36,7 +36,20 @@ class StoreConversationRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            if (! $this->filled('participant_user_id') || $this->user()->hasRole(['school_admin', 'direction', 'teacher', 'surveillant'])) {
+            if ($this->user()->hasRole(['school_admin', 'direction', 'teacher', 'surveillant'])) {
+                return;
+            }
+
+            if ($this->user()->tenant?->settings?->isPastMessagingCutoff()) {
+                $validator->errors()->add(
+                    'body',
+                    "La messagerie est fermée pour aujourd'hui (heure limite : {$this->user()->tenant->settings->messaging_cutoff_time}). Réessayez demain."
+                );
+
+                return;
+            }
+
+            if (! $this->filled('participant_user_id')) {
                 return;
             }
 

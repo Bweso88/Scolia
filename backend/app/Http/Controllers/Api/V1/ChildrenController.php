@@ -17,7 +17,9 @@ use App\Models\BehaviorObservation;
 use App\Models\Homework;
 use App\Models\Message;
 use App\Models\Student;
+use App\Models\TeacherAssignment;
 use App\Models\TimetableSlot;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 /**
@@ -178,5 +180,37 @@ class ChildrenController extends Controller
         );
 
         return $announcements;
+    }
+
+    /**
+     * Destinataires possibles pour un parent souhaitant écrire à propos de
+     * cet enfant : les enseignants de sa classe (joignables directement
+     * seulement si l'école l'a autorisé, voir MessagingPermission) et,
+     * toujours, la direction — recours par défaut quand un enseignant ne
+     * l'est pas (docs/PRODUCT_ARCHITECTURE.md §7).
+     */
+    public function messagingContacts(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $teachers = TeacherAssignment::where('school_class_id', $student->school_class_id)
+            ->with(['teacher.user', 'subject'])
+            ->get()
+            ->unique('teacher_id')
+            ->map(fn (TeacherAssignment $assignment) => [
+                'user_id' => $assignment->teacher->user_id,
+                'name' => $assignment->teacher->user->name,
+                'subject' => $assignment->subject?->name,
+                'contactable' => (bool) $assignment->teacher->messagingPermission?->can_be_contacted_directly,
+            ])
+            ->values();
+
+        $direction = User::role(['school_admin', 'direction'])
+            ->get()
+            ->map(fn (User $user) => ['user_id' => $user->id, 'name' => $user->name])
+            ->values();
+
+        return response()->json(['teachers' => $teachers, 'direction' => $direction]);
     }
 }

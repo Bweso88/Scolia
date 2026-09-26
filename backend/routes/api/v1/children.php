@@ -21,4 +21,5 @@ Route::prefix('children')->name('children.')->group(function () {
     Route::get('{student}/timetable', [ChildrenController::class, 'timetable'])->name('timetable');
     Route::get('{student}/grades', [ChildrenController::class, 'grades'])->name('grades');
     Route::get('{student}/announcements', [ChildrenController::class, 'announcements'])->name('announcements');
+    Route::get('{student}/messaging-contacts', [ChildrenController::class, 'messagingContacts'])->name('messaging-contacts');
 });
