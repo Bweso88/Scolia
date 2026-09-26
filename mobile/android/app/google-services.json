@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "911253384275",
+    "project_id": "scolia-c39eb",
+    "storage_bucket": "scolia-c39eb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:911253384275:android:6a538b97989b035f1b2aa6",
+        "android_client_info": {
+          "package_name": "com.scolia.scolia"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmk-LL9ok2_yBLBcIuZwabYF7raYy8OAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

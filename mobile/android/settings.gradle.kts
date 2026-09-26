@@ -21,6 +21,9 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.9.1" apply false
     id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    // Lit google-services.json (app/) pour configurer Firebase — requis
+    // pour que firebase_core/firebase_messaging trouvent le projet.
+    id("com.google.gms.google-services") version "4.5.0" apply false
 }
 
 include(":app")

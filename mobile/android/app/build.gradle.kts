@@ -3,6 +3,8 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Lit google-services.json ci-contre pour initialiser Firebase.
+    id("com.google.gms.google-services")
 }
 
 android {

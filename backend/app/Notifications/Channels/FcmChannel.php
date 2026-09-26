@@ -3,16 +3,21 @@
 namespace App\Notifications\Channels;
 
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Kreait\Firebase\Contract\Messaging;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification as FirebaseNotification;
+use Throwable;
 
 /**
- * Canal Firebase Cloud Messaging (docs/PRODUCT_ARCHITECTURE.md §16).
+ * Canal Firebase Cloud Messaging, via l'API HTTP v1 (kreait/laravel-firebase)
+ * — l'ancienne API "legacy" à clé serveur simple (FCM_SERVER_KEY) a été
+ * fermée par Google ; l'authentification se fait désormais avec un compte
+ * de service (voir FIREBASE_CREDENTIALS dans .env, docs/PRODUCT_ARCHITECTURE.md §16).
  *
- * Sans FCM_SERVER_KEY configurée (dev/tests), l'envoi est silencieusement
- * ignoré — l'historique reste disponible via le canal `database`. En
- * production, définir FCM_SERVER_KEY suffit à activer le push réel, sans
- * changement de code applicatif.
+ * Sans FIREBASE_CREDENTIALS configurée (dev/tests), l'envoi est
+ * silencieusement ignoré — l'historique reste disponible via le canal
+ * `database`.
  */
 class FcmChannel
 {
@@ -22,9 +27,7 @@ class FcmChannel
             return;
         }
 
-        $serverKey = config('services.fcm.server_key');
-
-        if (! $serverKey) {
+        if (! config('firebase.projects.app.credentials')) {
             return;
         }
 
@@ -36,18 +39,23 @@ class FcmChannel
 
         $payload = $notification->toFcm($notifiable);
 
-        foreach ($tokens as $token) {
-            $response = Http::withToken($serverKey)->post('https://fcm.googleapis.com/fcm/send', [
-                'to' => $token,
-                'notification' => [
-                    'title' => $payload['title'],
-                    'body' => $payload['body'],
-                ],
-                'data' => $payload['data'] ?? [],
-            ]);
+        try {
+            $messaging = app(Messaging::class);
+        } catch (Throwable $e) {
+            Log::warning('Firebase Messaging indisponible', ['error' => $e->getMessage()]);
 
-            if ($response->failed()) {
-                Log::warning('Échec envoi FCM', ['token' => $token, 'status' => $response->status()]);
+            return;
+        }
+
+        foreach ($tokens as $token) {
+            try {
+                $messaging->send(
+                    CloudMessage::withTarget('token', $token)
+                        ->withNotification(FirebaseNotification::create($payload['title'], $payload['body']))
+                        ->withData(array_map('strval', $payload['data'] ?? []))
+                );
+            } catch (Throwable $e) {
+                Log::warning('Échec envoi FCM', ['token' => $token, 'error' => $e->getMessage()]);
             }
         }
     }
