@@ -41,6 +41,7 @@ class _ScoliaAppState extends State<ScoliaApp> {
       child: Builder(
         builder: (context) {
           NotificationService.onMessageReceived ??= () => context.read<NotificationsProvider>().charger();
+          NotificationService.onTokenRefreshed ??= (token) => context.read<AuthProvider>().renvoyerTokenFCM(token);
           final router = buildRouter(context);
           // Couleurs de l'école connectée appliquées à l'ensemble de
           // l'application (docs/PRODUCT_ARCHITECTURE.md §16) ; à défaut

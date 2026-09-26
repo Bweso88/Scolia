@@ -28,6 +28,8 @@ class FcmChannel
         }
 
         if (! config('firebase.projects.app.credentials')) {
+            Log::warning('FIREBASE_CREDENTIALS non configurée : notification FCM ignorée');
+
             return;
         }
 

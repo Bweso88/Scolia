@@ -13,6 +13,11 @@ class NotificationService {
   /// de l'arbre de widgets.
   static void Function()? onMessageReceived;
 
+  /// Branché depuis app.dart pour renvoyer au backend un token FCM
+  /// renouvelé par le système (l'ancien devient invalide, la notification
+  /// ne partirait plus vers cet appareil sinon).
+  static void Function(String token)? onTokenRefreshed;
+
   static Future<void> initialiser() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios     = DarwinInitializationSettings();
@@ -24,9 +29,14 @@ class NotificationService {
     // échoué silencieusement (voir main.dart) : ces appels lèveraient
     // alors une exception à chaque démarrage.
     try {
+      // Requis sur Android 13+ (et affiché à l'utilisateur sur iOS) :
+      // sans cette autorisation explicite, aucune notification ne
+      // s'affiche même si le message FCM est bien reçu par l'appareil.
+      await FirebaseMessaging.instance.requestPermission();
       FirebaseMessaging.onMessage.listen(_afficherNotifLocale);
       FirebaseMessaging.onMessageOpenedApp.listen(_gererOuverture);
       FirebaseMessaging.onBackgroundMessage(_gererEnArrierePlan);
+      FirebaseMessaging.instance.onTokenRefresh.listen((token) => onTokenRefreshed?.call(token));
     } catch (_) {}
   }
 

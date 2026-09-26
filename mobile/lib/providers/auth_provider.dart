@@ -103,4 +103,14 @@ class AuthProvider extends ChangeNotifier {
       await NotificationService.enregistrerToken(fcmToken);
     }
   }
+
+  /// Renvoie au backend un token FCM renouvelé par le système (voir
+  /// NotificationService.onTokenRefreshed, branché depuis app.dart).
+  /// Sans session active, il n'y a personne à qui l'associer.
+  Future<void> renvoyerTokenFCM(String token) async {
+    if (!estConnecte) return;
+    try {
+      await NotificationService.enregistrerToken(token);
+    } catch (_) {}
+  }
 }

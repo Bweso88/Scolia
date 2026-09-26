@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Requis depuis Android 13 (API 33) pour pouvoir afficher la moindre
+         notification, y compris celles reçues via Firebase Cloud Messaging. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="scolia"
         android:name="${applicationName}"
