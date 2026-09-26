@@ -217,6 +217,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _sectionPersonnel(BuildContext context) {
+    final estAdmin = context.read<AuthProvider>().user?.estAdmin == true;
+
     return [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -240,6 +242,8 @@ class _HomeScreenState extends State<HomeScreen> {
             _CarteAcces(icone: Icons.campaign_outlined,       titre: 'Annonces',      couleur: AppColors.red,    onTap: () => context.go('/liaison')),
             _CarteAcces(icone: Icons.calendar_today_outlined, titre: 'Calendrier',    couleur: AppColors.amber,  onTap: () => context.push('/calendrier')),
             _CarteAcces(icone: Icons.forum_outlined,          titre: 'Messagerie',    couleur: AppColors.blue,   onTap: () => context.push('/messagerie')),
+            if (estAdmin)
+              _CarteAcces(icone: Icons.admin_panel_settings_outlined, titre: 'Gestion', couleur: AppColors.navy, onTap: () => context.push('/gestion')),
           ],
         ),
       ),

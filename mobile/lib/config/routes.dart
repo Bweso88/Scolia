@@ -15,6 +15,17 @@ import '../screens/liaison/nouveau_message_screen.dart';
 import '../screens/messagerie/messagerie_screen.dart';
 import '../screens/messagerie/nouvelle_conversation_screen.dart';
 import '../screens/messagerie/conversation_screen.dart';
+import '../screens/gestion/gestion_screen.dart';
+import '../screens/gestion/matieres_screen.dart';
+import '../screens/gestion/classes_screen.dart';
+import '../screens/gestion/creer_classe_screen.dart';
+import '../screens/gestion/professeurs_screen.dart';
+import '../screens/gestion/creer_professeur_screen.dart';
+import '../screens/gestion/eleves_gestion_screen.dart';
+import '../screens/gestion/creer_eleve_screen.dart';
+import '../models/school_class_admin.dart';
+import '../models/teacher_admin.dart';
+import '../models/student.dart';
 import '../screens/remarques/remarques_screen.dart';
 import '../screens/remarques/nouvelle_remarque_screen.dart';
 import '../screens/calendrier/calendrier_screen.dart';
@@ -62,6 +73,23 @@ GoRouter buildRouter(BuildContext context) {
           final extra = state.extra as Map<String, dynamic>;
           return ConversationScreen(conversationId: extra['id'] as int, titre: extra['titre'] as String);
         },
+      ),
+      GoRoute(path: '/gestion',              builder: (_, __) => const GestionScreen()),
+      GoRoute(path: '/gestion/matieres',      builder: (_, __) => const MatieresScreen()),
+      GoRoute(path: '/gestion/classes',       builder: (_, __) => const ClassesScreen()),
+      GoRoute(
+        path: '/gestion/classes/creer',
+        builder: (_, state) => CreerClasseScreen(classe: state.extra as SchoolClassAdmin?),
+      ),
+      GoRoute(path: '/gestion/professeurs',   builder: (_, __) => const ProfesseursScreen()),
+      GoRoute(
+        path: '/gestion/professeurs/creer',
+        builder: (_, state) => CreerProfesseurScreen(professeur: state.extra as TeacherAdmin?),
+      ),
+      GoRoute(path: '/gestion/eleves',        builder: (_, __) => const ElevesGestionScreen()),
+      GoRoute(
+        path: '/gestion/eleves/creer',
+        builder: (_, state) => CreerEleveScreen(eleve: state.extra as Student?),
       ),
       GoRoute(path: '/remarques',         builder: (_, __) => const RemarquesScreen()),
       GoRoute(

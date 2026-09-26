@@ -8,4 +8,12 @@ class StudentService {
     final data = await apiService.get('/admin/students', params: schoolClassId != null ? {'school_class_id': schoolClassId} : null);
     return (data['data'] as List).map((e) => Student.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  Future<void> creerEleve(Map<String, dynamic> corps) async {
+    await apiService.post('/admin/students', body: corps);
+  }
+
+  Future<void> modifierEleve(int id, Map<String, dynamic> corps) async {
+    await apiService.patch('/admin/students/$id', body: corps);
+  }
 }

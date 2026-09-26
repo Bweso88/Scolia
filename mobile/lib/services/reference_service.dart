@@ -8,4 +8,16 @@ class ReferenceService {
     final data = await apiService.get('/admin/subjects');
     return (data['data'] as List).map((e) => Matiere.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  Future<void> creerMatiere(String nom) async {
+    await apiService.post('/admin/subjects', body: {'name': nom});
+  }
+
+  Future<void> modifierMatiere(int id, String nom) async {
+    await apiService.patch('/admin/subjects/$id', body: {'name': nom});
+  }
+
+  Future<void> supprimerMatiere(int id) async {
+    await apiService.delete('/admin/subjects/$id');
+  }
 }
