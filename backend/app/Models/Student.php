@@ -53,6 +53,17 @@ class Student extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Même lien que guardians(), exposé comme HasMany sur le modèle pivot
+     * lui-même plutôt que via la relation BelongsToMany — utilisé par le
+     * RelationManager Filament pour que create() déclenche bien le
+     * renseignement automatique de tenant_id (voir avertissement ci-dessus).
+     */
+    public function studentGuardians(): HasMany
+    {
+        return $this->hasMany(StudentGuardian::class);
+    }
+
     public function homeworkStatuses(): HasMany
     {
         return $this->hasMany(HomeworkStatus::class);

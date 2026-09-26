@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,14 +17,29 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'phone', 'password', 'locale', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use BelongsToTenant, HasApiTokens, HasFactory, HasRoles, Notifiable;
+
+    /**
+     * Le panel /admin (Filament) est réservé à la direction de l'école ;
+     * les rôles spatie sont scopés par tenant (teams), donc il faut
+     * positionner le team_id du registrar avant de vérifier le rôle — voir
+     * App\Http\Controllers\Api\V1\Auth\AuthController::respondWithToken
+     * pour la même nécessité côté API.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        app(PermissionRegistrar::class)->setPermissionsTeamId($this->tenant_id);
+
+        return $this->is_active && $this->hasAnyRole(['school_admin', 'direction']);
+    }
 
     protected function casts(): array
     {
