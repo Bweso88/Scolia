@@ -12,6 +12,9 @@ import '../screens/absences/saisir_absence_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/liaison/liaison_screen.dart';
 import '../screens/liaison/nouveau_message_screen.dart';
+import '../screens/messagerie/messagerie_screen.dart';
+import '../screens/messagerie/nouvelle_conversation_screen.dart';
+import '../screens/messagerie/conversation_screen.dart';
 import '../screens/remarques/remarques_screen.dart';
 import '../screens/remarques/nouvelle_remarque_screen.dart';
 import '../screens/calendrier/calendrier_screen.dart';
@@ -51,6 +54,15 @@ GoRouter buildRouter(BuildContext context) {
       ),
       GoRoute(path: '/liaison',           builder: (_, __) => const LiaisonScreen()),
       GoRoute(path: '/liaison/nouveau',   builder: (_, __) => const NouveauMessageScreen()),
+      GoRoute(path: '/messagerie',           builder: (_, __) => const MessagerieScreen()),
+      GoRoute(path: '/messagerie/nouvelle',  builder: (_, __) => const NouvelleConversationScreen()),
+      GoRoute(
+        path: '/messagerie/conversation',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return ConversationScreen(conversationId: extra['id'] as int, titre: extra['titre'] as String);
+        },
+      ),
       GoRoute(path: '/remarques',         builder: (_, __) => const RemarquesScreen()),
       GoRoute(
         path: '/remarques/nouvelle',

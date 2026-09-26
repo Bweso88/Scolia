@@ -20,6 +20,7 @@ class Student {
   final String lastName;
   final String? enrollmentNumber;
   final String status;
+  final bool isActivated;
   final SchoolClassRef? schoolClass;
 
   const Student({
@@ -28,6 +29,7 @@ class Student {
     required this.lastName,
     this.enrollmentNumber,
     required this.status,
+    this.isActivated = true,
     this.schoolClass,
   });
 
@@ -37,6 +39,7 @@ class Student {
         lastName:         j['last_name'] as String,
         enrollmentNumber: j['enrollment_number'] as String?,
         status:           j['status'] as String? ?? 'active',
+        isActivated:      j['is_activated'] as bool? ?? true,
         schoolClass: j['school_class'] is Map
             ? SchoolClassRef.fromJson(j['school_class'] as Map<String, dynamic>)
             : null,

@@ -15,6 +15,7 @@ class TenantBranding {
   final String? phone;
   final String? email;
   final String? address;
+  final String? messagingCutoffTime;
 
   const TenantBranding({
     required this.id,
@@ -27,6 +28,7 @@ class TenantBranding {
     this.phone,
     this.email,
     this.address,
+    this.messagingCutoffTime,
   });
 
   factory TenantBranding.fromJson(Map<String, dynamic> j) => TenantBranding(
@@ -40,7 +42,19 @@ class TenantBranding {
         phone:   j['phone'] as String?,
         email:   j['email'] as String?,
         address: j['address'] as String?,
+        messagingCutoffTime: j['messaging_cutoff_time'] as String?,
       );
+
+  /// L'heure limite est au format "HH:MM:SS" (colonne SQL `time`) ;
+  /// on ne compare que les 5 premiers caractères pour matcher
+  /// DateFormat('HH:mm').format(now()).
+  bool get messagerieFermee {
+    if (messagingCutoffTime == null) return false;
+    final maintenant = TimeOfDay.now();
+    final heureLimite = messagingCutoffTime!.split(':');
+    final limite = TimeOfDay(hour: int.parse(heureLimite[0]), minute: int.parse(heureLimite[1]));
+    return maintenant.hour > limite.hour || (maintenant.hour == limite.hour && maintenant.minute >= limite.minute);
+  }
 
   static Color? _couleur(String? hex) {
     if (hex == null || hex.isEmpty) return null;
