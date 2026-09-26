@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\Admin\HomeworkController;
 use App\Http\Controllers\Api\V1\Admin\MessageController;
 use App\Http\Controllers\Api\V1\Admin\MessagingPermissionController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
+use App\Http\Controllers\Api\V1\Admin\SchoolYearController;
 use App\Http\Controllers\Api\V1\Admin\StudentActivationController;
 use App\Http\Controllers\Api\V1\Admin\StudentController;
 use App\Http\Controllers\Api\V1\Admin\StudentGuardianController;
@@ -37,6 +38,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->only(['index', 'store', 'destroy']);
 
     Route::apiResource('school-classes', SchoolClassController::class);
+    Route::get('school-years', [SchoolYearController::class, 'index'])->name('school-years.index');
     Route::apiResource('teachers', TeacherController::class)
         ->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::apiResource('homeworks', HomeworkController::class);
