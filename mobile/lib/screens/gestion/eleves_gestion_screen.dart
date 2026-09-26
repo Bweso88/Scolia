@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../models/student.dart';
 import '../../services/student_service.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/success_toast.dart';
 
 class ElevesGestionScreen extends StatefulWidget {
   const ElevesGestionScreen({super.key});
@@ -31,6 +32,34 @@ class _ElevesGestionScreenState extends State<ElevesGestionScreen> {
     } catch (_) {
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  Future<void> _basculerActivation(int index, bool actif) async {
+    final avant = _eleves[index];
+    setState(() {
+      _eleves[index] = Student(
+        id: avant.id,
+        firstName: avant.firstName,
+        lastName: avant.lastName,
+        enrollmentNumber: avant.enrollmentNumber,
+        status: avant.status,
+        isActivated: actif,
+        schoolClass: avant.schoolClass,
+      );
+    });
+    try {
+      await _service.activerEleve(avant.id, actif);
+      if (mounted) {
+        showSuccessToast(context, actif ? 'Élève activé' : 'Élève désactivé');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _eleves[index] = avant);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.red),
+        );
+      }
     }
   }
 
@@ -62,9 +91,10 @@ class _ElevesGestionScreenState extends State<ElevesGestionScreen> {
                           e.schoolClass?.name ?? '—',
                           style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
                         ),
-                        trailing: Icon(
-                          e.isActivated ? Icons.check_circle : Icons.pause_circle_outline,
-                          color: e.isActivated ? AppColors.green : AppColors.orange,
+                        trailing: Switch.adaptive(
+                          value: e.isActivated,
+                          activeThumbColor: AppColors.green,
+                          onChanged: (valeur) => _basculerActivation(i, valeur),
                         ),
                         onTap: () async {
                           final modifie = await context.push<bool>('/gestion/eleves/creer', extra: e);

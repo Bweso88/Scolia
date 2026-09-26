@@ -16,4 +16,8 @@ class StudentService {
   Future<void> modifierEleve(int id, Map<String, dynamic> corps) async {
     await apiService.patch('/admin/students/$id', body: corps);
   }
+
+  Future<void> activerEleve(int id, bool actif) async {
+    await apiService.patch('/admin/students/$id/activation', body: {'active': actif});
+  }
 }
