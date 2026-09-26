@@ -4,13 +4,11 @@ namespace App\Notifications;
 
 use App\Models\Homework;
 use App\Notifications\Concerns\RespectsNotificationPreferences;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class NewHomeworkNotification extends Notification implements ShouldQueue
+class NewHomeworkNotification extends Notification
 {
-    use Queueable, RespectsNotificationPreferences;
+    use RespectsNotificationPreferences;
 
     public function __construct(public Homework $homework) {}
 

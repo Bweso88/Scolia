@@ -4,13 +4,11 @@ namespace App\Notifications;
 
 use App\Models\Grade;
 use App\Notifications\Concerns\RespectsNotificationPreferences;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class NewGradeNotification extends Notification implements ShouldQueue
+class NewGradeNotification extends Notification
 {
-    use Queueable, RespectsNotificationPreferences;
+    use RespectsNotificationPreferences;
 
     public function __construct(public Grade $grade) {}
 

@@ -4,13 +4,11 @@ namespace App\Notifications;
 
 use App\Models\AttendanceRecord;
 use App\Notifications\Concerns\RespectsNotificationPreferences;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class AbsenceRecordedNotification extends Notification implements ShouldQueue
+class AbsenceRecordedNotification extends Notification
 {
-    use Queueable, RespectsNotificationPreferences;
+    use RespectsNotificationPreferences;
 
     public function __construct(public AttendanceRecord $record) {}
 

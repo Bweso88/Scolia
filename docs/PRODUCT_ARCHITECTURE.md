@@ -688,9 +688,9 @@ l'appartenance au même tenant (défense en profondeur, voir §6).
 ## 16. Système de notifications
 
 - Canal principal : **push FCM**, via les notifications Laravel
-  (`Notification::send` + channel `fcm` custom), toujours **mises en
-  file d'attente** (jamais envoyées de façon synchrone dans une requête
-  HTTP).
+  (`Notification::send` + channel `fcm` custom), envoyées **de façon
+  synchrone** dans la requête HTTP (pas de `ShouldQueue`) — évite de
+  dépendre d'un worker de file d'attente dédié sur l'hébergement.
 - Chaque catégorie métier (devoir, absence, message, annonce, bulletin,
   réunion) déclenche un `Notification` Laravel dédié, ce qui permet à
   l'utilisateur de désactiver une catégorie sans toucher aux autres

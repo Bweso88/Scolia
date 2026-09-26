@@ -4,14 +4,12 @@ namespace App\Notifications;
 
 use App\Models\Announcement;
 use App\Notifications\Concerns\RespectsNotificationPreferences;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
 
-class NewAnnouncementNotification extends Notification implements ShouldQueue
+class NewAnnouncementNotification extends Notification
 {
-    use Queueable, RespectsNotificationPreferences;
+    use RespectsNotificationPreferences;
 
     public function __construct(public Announcement $announcement) {}
 
