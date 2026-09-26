@@ -10,9 +10,12 @@ use App\Http\Controllers\Api\V1\Admin\GradingPeriodController;
 use App\Http\Controllers\Api\V1\Admin\HomeworkController;
 use App\Http\Controllers\Api\V1\Admin\MessageController;
 use App\Http\Controllers\Api\V1\Admin\MessagingPermissionController;
+use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\StudentActivationController;
 use App\Http\Controllers\Api\V1\Admin\StudentController;
+use App\Http\Controllers\Api\V1\Admin\StudentGuardianController;
 use App\Http\Controllers\Api\V1\Admin\SubjectController;
+use App\Http\Controllers\Api\V1\Admin\TeacherController;
 use App\Http\Controllers\Api\V1\Admin\TimetableSlotController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +33,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::apiResource('students', StudentController::class);
     Route::patch('students/{student}/activation', [StudentActivationController::class, 'update'])
         ->name('students.activation');
+    Route::apiResource('students.guardians', StudentGuardianController::class)
+        ->only(['index', 'store', 'destroy']);
+
+    Route::apiResource('school-classes', SchoolClassController::class);
+    Route::apiResource('teachers', TeacherController::class)
+        ->only(['index', 'store', 'show', 'update', 'destroy']);
     Route::apiResource('homeworks', HomeworkController::class);
 
     Route::apiResource('behavior-observations', BehaviorObservationController::class)
@@ -66,4 +75,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->only(['index', 'store', 'update']);
 
     Route::get('subjects', [SubjectController::class, 'index'])->name('subjects.index');
+    Route::post('subjects', [SubjectController::class, 'store'])->name('subjects.store');
+    Route::patch('subjects/{subject}', [SubjectController::class, 'update'])->name('subjects.update');
+    Route::delete('subjects/{subject}', [SubjectController::class, 'destroy'])->name('subjects.destroy');
 });
