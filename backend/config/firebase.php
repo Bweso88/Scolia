@@ -50,7 +50,29 @@ return [
              *
              */
 
-            'credentials' => env('FIREBASE_CREDENTIALS', env('GOOGLE_APPLICATION_CREDENTIALS')),
+            // FIREBASE_CREDENTIALS accepte soit le JSON brut, soit un chemin de
+            // fichier, soit (recommandé en production) ce même JSON encodé en
+            // base64 — pratique pour les éditeurs de variables d'environnement
+            // qui n'acceptent pas les espaces/guillemets non échappés.
+            'credentials' => (static function (): ?string {
+                $credentials = env('FIREBASE_CREDENTIALS', env('GOOGLE_APPLICATION_CREDENTIALS'));
+
+                if (! is_string($credentials) || $credentials === '') {
+                    return $credentials;
+                }
+
+                if (str_starts_with($credentials, '{') || str_starts_with($credentials, '/')) {
+                    return $credentials;
+                }
+
+                $decoded = base64_decode($credentials, true);
+
+                if ($decoded !== false && str_starts_with($decoded, '{')) {
+                    return $decoded;
+                }
+
+                return $credentials;
+            })(),
 
             /*
              * ------------------------------------------------------------------------
