@@ -4,6 +4,8 @@ namespace App\Http\Requests\Api\V1\Admin;
 
 use App\Models\Conversation;
 use App\Models\Teacher;
+use App\Models\TeacherAssignment;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -53,12 +55,40 @@ class StoreConversationRequest extends FormRequest
                 return;
             }
 
+            $target = User::find($this->input('participant_user_id'));
+
+            // La direction (school_admin/direction) est toujours joignable,
+            // sans restriction de classe.
+            if ($target?->hasRole(['school_admin', 'direction'])) {
+                return;
+            }
+
             $teacher = Teacher::where('user_id', $this->input('participant_user_id'))->first();
 
-            if ($teacher && ! $teacher->messagingPermission?->can_be_contacted_directly) {
+            if (! $teacher) {
+                $validator->errors()->add(
+                    'participant_user_id',
+                    "Un parent ne peut écrire qu'aux enseignants de ses enfants ou à la direction."
+                );
+
+                return;
+            }
+
+            if (! $teacher->messagingPermission?->can_be_contacted_directly) {
                 $validator->errors()->add(
                     'participant_user_id',
                     "Cet enseignant n'est pas joignable directement : passez par l'administration de l'école."
+                );
+
+                return;
+            }
+
+            $classesDesEnfants = $this->user()->students()->pluck('school_class_id');
+
+            if (! TeacherAssignment::where('teacher_id', $teacher->id)->whereIn('school_class_id', $classesDesEnfants)->exists()) {
+                $validator->errors()->add(
+                    'participant_user_id',
+                    "Cet enseignant n'enseigne pas dans la classe de votre enfant."
                 );
             }
         });
