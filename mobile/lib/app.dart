@@ -3,11 +3,8 @@ import 'package:provider/provider.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
-import 'providers/liaison_provider.dart';
-import 'providers/remarques_provider.dart';
-import 'providers/evenements_provider.dart';
-import 'providers/notes_provider.dart';
-import 'providers/frais_provider.dart';
+import 'providers/child_provider.dart';
+import 'providers/notifications_provider.dart';
 import 'services/notification_service.dart';
 
 class ScoliaApp extends StatefulWidget {
@@ -29,33 +26,29 @@ class _ScoliaAppState extends State<ScoliaApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProxyProvider<AuthProvider, LiaisonProvider>(
-          create: (_) => LiaisonProvider(),
-          update: (_, auth, liaison) => liaison!..mettreAJourToken(auth.token),
+        ChangeNotifierProxyProvider<AuthProvider, ChildProvider>(
+          create: (_) => ChildProvider(),
+          update: (_, auth, enfants) => enfants!..mettreAJourToken(auth.token),
         ),
-        ChangeNotifierProxyProvider<AuthProvider, RemarquesProvider>(
-          create: (_) => RemarquesProvider(),
-          update: (_, auth, rq) => rq!..mettreAJourToken(auth.token),
-        ),
-        ChangeNotifierProxyProvider<AuthProvider, EvenementsProvider>(
-          create: (_) => EvenementsProvider(),
-          update: (_, auth, ev) => ev!..mettreAJourToken(auth.token),
-        ),
-        ChangeNotifierProxyProvider<AuthProvider, NotesProvider>(
-          create: (_) => NotesProvider(),
-          update: (_, auth, notes) => notes!..mettreAJourToken(auth.token),
-        ),
-        ChangeNotifierProxyProvider<AuthProvider, FraisProvider>(
-          create: (_) => FraisProvider(),
-          update: (_, auth, frais) => frais!..mettreAJourToken(auth.token),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationsProvider>(
+          create: (_) => NotificationsProvider(),
+          update: (_, auth, notifs) {
+            if (auth.estConnecte) notifs!.charger();
+            return notifs!;
+          },
         ),
       ],
       child: Builder(
         builder: (context) {
+          NotificationService.onMessageReceived ??= () => context.read<NotificationsProvider>().charger();
           final router = buildRouter(context);
+          // Couleurs de l'école connectée appliquées à l'ensemble de
+          // l'application (docs/PRODUCT_ARCHITECTURE.md §16) ; à défaut
+          // (avant connexion), l'identité visuelle Scolia par défaut.
+          final branding = context.watch<AuthProvider>().user?.tenant;
           return MaterialApp.router(
-            title: 'Scolia',
-            theme: buildTheme(),
+            title: branding?.displayName ?? 'Scolia',
+            theme: buildTheme(primary: branding?.primaryColor, secondary: branding?.secondaryColor),
             routerConfig: router,
             debugShowCheckedModeBanner: false,
             locale: const Locale('fr', 'FR'),

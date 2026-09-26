@@ -1,9 +1,17 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api_service.dart';
 
 class NotificationService {
   static final _localNotifications = FlutterLocalNotificationsPlugin();
+
+  /// Branché depuis app.dart pour rafraîchir le badge de la cloche
+  /// (NotificationsProvider) dès qu'un message arrive au premier plan,
+  /// sans coupler ce service (statique, sans accès au Provider) au reste
+  /// de l'arbre de widgets.
+  static void Function()? onMessageReceived;
 
   static Future<void> initialiser() async {
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -12,17 +20,29 @@ class NotificationService {
       const InitializationSettings(android: android, iOS: ios),
     );
 
-    FirebaseMessaging.onMessage.listen(_afficherNotifLocale);
-    FirebaseMessaging.onMessageOpenedApp.listen(_gererOuverture);
-    FirebaseMessaging.onBackgroundMessage(_gererEnArrierePlan);
+    // Sans projet Firebase configuré, Firebase.initializeApp() a déjà
+    // échoué silencieusement (voir main.dart) : ces appels lèveraient
+    // alors une exception à chaque démarrage.
+    try {
+      FirebaseMessaging.onMessage.listen(_afficherNotifLocale);
+      FirebaseMessaging.onMessageOpenedApp.listen(_gererOuverture);
+      FirebaseMessaging.onBackgroundMessage(_gererEnArrierePlan);
+    } catch (_) {}
   }
 
   static Future<String?> getToken() async {
-    return FirebaseMessaging.instance.getToken();
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> enregistrerToken(String token) async {
-    await apiService.post('/notifications/fcm-token', body: {'fcm_token': token});
+    await apiService.post('/devices', body: {
+      'fcm_token': token,
+      'platform': !kIsWeb && Platform.isIOS ? 'ios' : 'android',
+    });
   }
 
   static Future<void> _afficherNotifLocale(RemoteMessage message) async {
@@ -40,6 +60,7 @@ class NotificationService {
       message.notification?.body,
       details,
     );
+    onMessageReceived?.call();
   }
 
   static void _gererOuverture(RemoteMessage message) {

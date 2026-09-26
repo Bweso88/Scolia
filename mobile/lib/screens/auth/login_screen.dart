@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -12,10 +13,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _formKey     = GlobalKey<FormState>();
-  final _telCtrl     = TextEditingController(text: '+242');
-  final _codeCtrl    = TextEditingController();
-  bool  _codeVisible = false;
+  final _formKey       = GlobalKey<FormState>();
+  final _emailCtrl     = TextEditingController();
+  final _motDePasseCtrl = TextEditingController();
+  bool  _motDePasseVisible = false;
   late  AnimationController _animCtrl;
   late  Animation<Offset>   _slideAnim;
   late  Animation<double>   _fadeAnim;
@@ -33,8 +34,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   void dispose() {
     _animCtrl.dispose();
-    _telCtrl.dispose();
-    _codeCtrl.dispose();
+    _emailCtrl.dispose();
+    _motDePasseCtrl.dispose();
     super.dispose();
   }
 
@@ -42,7 +43,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     try {
-      await auth.seConnecter(_telCtrl.text.trim(), _codeCtrl.text.trim());
+      await auth.seConnecter(_emailCtrl.text.trim(), _motDePasseCtrl.text);
+      if (!mounted) return;
+      // Un compte lié à plusieurs écoles doit choisir laquelle consulter
+      // avant d'entrer (docs/PRODUCT_ARCHITECTURE.md §9).
+      if (auth.aPlusieursEcoles) {
+        context.go('/auth/ecole');
+      } else {
+        context.go('/accueil');
+      }
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -105,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Plateforme scolaire',
+                          'Le cahier de liaison numérique',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 13, color: Colors.white.withOpacity(0.55),
                           ),
@@ -154,69 +163,45 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                               const SizedBox(height: 26),
 
-                              // ── Téléphone ──────────────────────────
-                              _ChampSaisie(
-                                controller:  _telCtrl,
-                                label:       'Numéro de téléphone',
-                                icone:       Icons.phone_outlined,
-                                clavier:     TextInputType.phone,
-                                validateur:  (v) {
-                                  if (v == null || v.trim().length < 8) return 'Numéro invalide';
+                              // ── Email ──────────────────────────────
+                              TextFormField(
+                                controller: _emailCtrl,
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.username],
+                                style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
+                                decoration: const InputDecoration(
+                                  labelText: 'Adresse e-mail',
+                                  prefixIcon: Icon(Icons.mail_outline),
+                                ),
+                                validator: (v) {
+                                  if (v == null || !v.contains('@')) return 'E-mail invalide';
                                   return null;
                                 },
                               ),
                               const SizedBox(height: 16),
 
-                              // ── Code ───────────────────────────────
+                              // ── Mot de passe ───────────────────────
                               TextFormField(
-                                controller:    _codeCtrl,
-                                obscureText:   !_codeVisible,
-                                textCapitalization: TextCapitalization.characters,
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 18, fontWeight: FontWeight.w700,
-                                  color: AppColors.navy, letterSpacing: 3,
-                                ),
+                                controller: _motDePasseCtrl,
+                                obscureText: !_motDePasseVisible,
+                                autofillHints: const [AutofillHints.password],
+                                style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
                                 decoration: InputDecoration(
-                                  labelText: 'Code d\'accès',
+                                  labelText: 'Mot de passe',
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   suffixIcon: IconButton(
                                     icon: Icon(
-                                      _codeVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      _motDePasseVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                       color: AppColors.muted,
                                     ),
-                                    onPressed: () => setState(() => _codeVisible = !_codeVisible),
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppColors.border),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppColors.border),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppColors.navy, width: 2),
+                                    onPressed: () => setState(() => _motDePasseVisible = !_motDePasseVisible),
                                   ),
                                 ),
+                                onFieldSubmitted: (_) => _seConnecter(),
                                 validator: (v) {
-                                  if (v == null || v.trim().length < 4) return 'Code requis';
+                                  if (v == null || v.isEmpty) return 'Mot de passe requis';
                                   return null;
                                 },
-                              ),
-
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  const Icon(Icons.info_outline, size: 13, color: AppColors.muted),
-                                  const SizedBox(width: 5),
-                                  Expanded(
-                                    child: Text(
-                                      'Parents : code dossier reçu de l\'école.\nEnseignants : code communiqué par l\'administration.',
-                                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted),
-                                    ),
-                                  ),
-                                ],
                               ),
 
                               const SizedBox(height: 28),
@@ -267,48 +252,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ChampSaisie extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final IconData icone;
-  final TextInputType clavier;
-  final String? Function(String?)? validateur;
-
-  const _ChampSaisie({
-    required this.controller,
-    required this.label,
-    required this.icone,
-    required this.clavier,
-    this.validateur,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller:  controller,
-      keyboardType: clavier,
-      style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
-      decoration: InputDecoration(
-        labelText:   label,
-        prefixIcon:  Icon(icone),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.navy, width: 2),
-        ),
-      ),
-      validator: validateur,
     );
   }
 }

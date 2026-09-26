@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import '../../providers/evenements_provider.dart';
-import '../../models/evenement.dart';
 import '../../config/theme.dart';
+import '../../models/timetable_slot.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/child_provider.dart';
+import '../../services/children_service.dart';
+import '../../services/timetable_service.dart';
 import '../../widgets/empty_state.dart';
 
+/// Emploi du temps hebdomadaire (docs/PRODUCT_ARCHITECTURE.md §7) : un
+/// parent consulte celui de l'enfant sélectionné, le personnel celui de sa
+/// classe.
 class CalendrierScreen extends StatefulWidget {
   const CalendrierScreen({super.key});
 
@@ -15,122 +20,145 @@ class CalendrierScreen extends StatefulWidget {
 }
 
 class _CalendrierScreenState extends State<CalendrierScreen> {
+  final _childrenService = ChildrenService();
+  final _timetableService = TimetableService();
+
+  List<TimetableSlot> _creneaux = [];
+  bool _charge = false;
+  int? _dernierEnfantId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<EvenementsProvider>().charger();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _charger());
   }
 
-  static const _icones = {
-    'reunion':  Icons.group_outlined,
-    'sortie':   Icons.directions_walk_outlined,
-    'vacances': Icons.beach_access_outlined,
-    'fete':     Icons.celebration_outlined,
-    'examen':   Icons.edit_note_outlined,
-    'autre':    Icons.event_outlined,
-  };
+  Future<void> _charger() async {
+    final user = context.read<AuthProvider>().user;
+    setState(() => _charge = true);
+    try {
+      if (user?.estParent == true) {
+        final enfant = context.read<ChildProvider>().selectionne;
+        if (enfant == null) return;
+        _creneaux = await _childrenService.getEmploiDuTemps(enfant.id);
+        _dernierEnfantId = enfant.id;
+      } else {
+        final classes = user?.classes ?? [];
+        _creneaux = await _timetableService.getEmploiDuTemps(
+          schoolClassId: classes.isEmpty ? null : classes.first.id,
+        );
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _charge = false);
+    }
+  }
 
-  static const _couleurs = {
-    'reunion':  AppColors.blue,
-    'sortie':   AppColors.green,
-    'vacances': AppColors.amber,
-    'fete':     AppColors.purple,
-    'examen':   AppColors.red,
-    'autre':    AppColors.muted,
-  };
+  Map<int, List<TimetableSlot>> get _creneauxParJour {
+    final groupes = <int, List<TimetableSlot>>{};
+    for (final c in _creneaux) {
+      groupes.putIfAbsent(c.dayOfWeek, () => []).add(c);
+    }
+    for (final liste in groupes.values) {
+      liste.sort((a, b) => a.startTime.compareTo(b.startTime));
+    }
+    return groupes;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final prov = context.watch<EvenementsProvider>();
+    final user = context.watch<AuthProvider>().user;
+    final estParent = user?.estParent == true;
+
+    if (estParent) {
+      final enfant = context.watch<ChildProvider>().selectionne;
+      if (enfant != null && enfant.id != _dernierEnfantId && !_charge) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _charger());
+      }
+    }
+
+    final parJour = _creneauxParJour;
+    final jours = parJour.keys.toList()..sort();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Calendrier')),
+      appBar: AppBar(title: const Text('Emploi du temps')),
       body: RefreshIndicator(
-        onRefresh: () => prov.charger(),
-        child: prov.charge
+        onRefresh: _charger,
+        child: _charge
             ? const Center(child: CircularProgressIndicator())
-            : prov.evenements.isEmpty
+            : _creneaux.isEmpty
                 ? EmptyState(
-                    message: 'Aucun événement',
-                    sousTitre: 'Les événements scolaires apparaîtront ici.',
-                    icone: Icons.calendar_today_outlined,
-                    onAction: () => prov.charger(),
+                    message: 'Aucun créneau',
+                    sousTitre: 'L\'emploi du temps n\'a pas encore été renseigné.',
+                    icone: Icons.schedule_outlined,
+                    onAction: _charger,
                     libelleAction: 'Actualiser',
                   )
                 : ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    itemCount: prov.evenements.length,
-                    itemBuilder: (_, i) => _CarteEvenement(
-                      evenement: prov.evenements[i],
-                      icone: _icones[prov.evenements[i].type] ?? Icons.event_outlined,
-                      couleur: _couleurs[prov.evenements[i].type] ?? AppColors.muted,
-                    ),
+                    itemCount: jours.length,
+                    itemBuilder: (_, i) => _CarteJour(jour: jours[i], creneaux: parJour[jours[i]]!),
                   ),
       ),
     );
   }
 }
 
-class _CarteEvenement extends StatelessWidget {
-  final Evenement evenement;
-  final IconData icone;
-  final Color couleur;
-
-  const _CarteEvenement({required this.evenement, required this.icone, required this.couleur});
+class _CarteJour extends StatelessWidget {
+  final int jour;
+  final List<TimetableSlot> creneaux;
+  const _CarteJour({required this.jour, required this.creneaux});
 
   @override
   Widget build(BuildContext context) {
-    DateTime? date;
-    try { date = DateTime.parse(evenement.dateDebut); } catch (_) {}
-
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(color: couleur.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (date != null) ...[
-                    Text(DateFormat('d', 'fr_FR').format(date),
-                        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18, color: couleur)),
-                    Text(DateFormat('MMM', 'fr_FR').format(date),
-                        style: GoogleFonts.plusJakartaSans(fontSize: 11, color: couleur)),
-                  ] else
-                    Icon(icone, color: couleur, size: 24),
-                ],
-              ),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: const BoxDecoration(
+              color: AppColors.navy,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(evenement.titre, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 14, color: AppColors.navy)),
-                  if (evenement.lieu != null) ...[
-                    const SizedBox(height: 2),
-                    Row(children: [
-                      const Icon(Icons.location_on_outlined, size: 12, color: AppColors.muted),
-                      const SizedBox(width: 2),
-                      Text(evenement.lieu!, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
-                    ]),
+            child: Text(TimetableSlot.jours[jour],
+                style: GoogleFonts.plusJakartaSans(color: AppColors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+          ),
+          ...creneaux.map((c) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 70,
+                      child: Text('${c.startTime}\n${c.endTime}',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(c.subject ?? '—',
+                              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.navy)),
+                          if (c.teacherName != null)
+                            Text(c.teacherName!, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted)),
+                        ],
+                      ),
+                    ),
+                    if (c.room != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: AppColors.light, borderRadius: BorderRadius.circular(6)),
+                        child: Text(c.room!, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted)),
+                      ),
                   ],
-                  if (evenement.description != null && evenement.description!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(evenement.description!, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.body), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
+                ),
+              )),
+          const SizedBox(height: 6),
+        ],
       ),
     );
   }

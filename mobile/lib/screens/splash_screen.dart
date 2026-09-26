@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(milliseconds: 1500));
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
-    context.go(auth.estConnecte ? '/accueil' : '/auth/telephone');
+    context.go(auth.estConnecte ? '/accueil' : '/auth/connexion');
   }
 
   @override
