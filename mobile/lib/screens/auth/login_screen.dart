@@ -4,6 +4,39 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import '../../widgets/pill_badge.dart';
+
+enum _Profil { parent, enseignant, direction }
+
+class _ProfilInfo {
+  final String libelle;
+  final IconData icone;
+  final String badge;
+  final String indice;
+
+  const _ProfilInfo({required this.libelle, required this.icone, required this.badge, required this.indice});
+}
+
+const _profils = {
+  _Profil.parent: _ProfilInfo(
+    libelle: 'Parent',
+    icone: Icons.family_restroom_rounded,
+    badge: 'Compte responsable',
+    indice: 'marie.dupont@email.fr',
+  ),
+  _Profil.enseignant: _ProfilInfo(
+    libelle: 'Enseignant',
+    icone: Icons.menu_book_rounded,
+    badge: 'Compte enseignant',
+    indice: 'prof.diallo@ecole.tld',
+  ),
+  _Profil.direction: _ProfilInfo(
+    libelle: 'Direction',
+    icone: Icons.corporate_fare_rounded,
+    badge: 'Compte direction',
+    indice: 'direction@ecole.tld',
+  ),
+};
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,10 +46,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _formKey       = GlobalKey<FormState>();
-  final _emailCtrl     = TextEditingController();
+  final _formKey        = GlobalKey<FormState>();
+  final _emailCtrl      = TextEditingController();
   final _motDePasseCtrl = TextEditingController();
   bool  _motDePasseVisible = false;
+  _Profil _profil = _Profil.parent;
   late  AnimationController _animCtrl;
   late  Animation<Offset>   _slideAnim;
   late  Animation<double>   _fadeAnim;
@@ -67,20 +101,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final info = _profils[_profil]!;
 
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0D1B3E), Color(0xFF1A3060)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.light, AppColors.white],
           ),
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -90,40 +125,76 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     child: Column(
                       children: [
                         Container(
-                          width: 80, height: 80,
+                          width: 84, height: 84,
                           decoration: BoxDecoration(
-                            color: AppColors.amber,
-                            borderRadius: BorderRadius.circular(22),
+                            color: AppColors.navy,
+                            borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.amber.withOpacity(0.45),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                                color: AppColors.navy.withOpacity(0.30),
+                                blurRadius: 28,
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.school_rounded, color: Colors.white, size: 40),
+                          child: const Icon(Icons.school_rounded, color: AppColors.white, size: 42),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                         Text(
                           'SCOLIA',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 30, fontWeight: FontWeight.w900,
-                            color: Colors.white, letterSpacing: 5,
+                            fontSize: 26, fontWeight: FontWeight.w900,
+                            color: AppColors.navy, letterSpacing: 4,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Le cahier de liaison numérique',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13, color: Colors.white.withOpacity(0.55),
-                          ),
+                        const SizedBox(height: 10),
+                        const PillBadge(
+                          label: 'Espace École & Familles',
+                          couleur: AppColors.navy,
+                          icone: Icons.school_outlined,
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 28),
+
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Column(
+                      children: [
+                        Text(
+                          'Bienvenue sur votre espace',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.navy,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "L'école et les familles, réunies en toute confiance.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Sélecteur de profil ──────────────────────────────
+                  SlideTransition(
+                    position: _slideAnim,
+                    child: FadeTransition(
+                      opacity: _fadeAnim,
+                      child: _SelecteurProfil(
+                        profil: _profil,
+                        onChange: (p) => setState(() => _profil = p),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
 
                   // ── Card connexion ───────────────────────────────────
                   SlideTransition(
@@ -131,15 +202,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     child: FadeTransition(
                       opacity: _fadeAnim,
                       child: Container(
-                        padding: const EdgeInsets.fromLTRB(28, 28, 28, 32),
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 26),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(28),
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(26),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: 40,
-                              offset: const Offset(0, 16),
+                              color: AppColors.navy.withOpacity(0.10),
+                              blurRadius: 32,
+                              offset: const Offset(0, 14),
                             ),
                           ],
                         ),
@@ -148,20 +219,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Connexion',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.navy,
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'IDENTIFIANT',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11, fontWeight: FontWeight.w700,
+                                      color: AppColors.muted, letterSpacing: 0.6,
+                                    ),
+                                  ),
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 250),
+                                    child: PillBadge(
+                                      key: ValueKey(info.badge),
+                                      label: info.badge,
+                                      couleur: AppColors.amber,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Identifiants fournis par votre école',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13, color: AppColors.muted,
-                                ),
-                              ),
-                              const SizedBox(height: 26),
+                              const SizedBox(height: 8),
 
                               // ── Email ──────────────────────────────
                               TextFormField(
@@ -169,9 +247,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 keyboardType: TextInputType.emailAddress,
                                 autofillHints: const [AutofillHints.username],
                                 style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
-                                decoration: const InputDecoration(
-                                  labelText: 'Adresse e-mail',
-                                  prefixIcon: Icon(Icons.mail_outline),
+                                decoration: InputDecoration(
+                                  hintText: info.indice,
+                                  prefixIcon: const Icon(Icons.mail_outline),
                                 ),
                                 validator: (v) {
                                   if (v == null || !v.contains('@')) return 'E-mail invalide';
@@ -180,6 +258,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                               const SizedBox(height: 16),
 
+                              Text(
+                                'MOT DE PASSE',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11, fontWeight: FontWeight.w700,
+                                  color: AppColors.muted, letterSpacing: 0.6,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+
                               // ── Mot de passe ───────────────────────
                               TextFormField(
                                 controller: _motDePasseCtrl,
@@ -187,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 autofillHints: const [AutofillHints.password],
                                 style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
                                 decoration: InputDecoration(
-                                  labelText: 'Mot de passe',
+                                  hintText: '••••••••••••',
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   suffixIcon: IconButton(
                                     icon: Icon(
@@ -204,33 +291,40 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 },
                               ),
 
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 24),
 
                               // ── Bouton ─────────────────────────────
                               SizedBox(
                                 width: double.infinity,
-                                height: 52,
+                                height: 54,
                                 child: ElevatedButton(
                                   onPressed: auth.charge ? null : _seConnecter,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.navy,
-                                    foregroundColor: Colors.white,
-                                    elevation: 4,
+                                    foregroundColor: AppColors.white,
+                                    elevation: 6,
                                     shadowColor: AppColors.navy.withOpacity(0.4),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
                                   child: auth.charge
                                       ? const SizedBox(
                                           height: 22, width: 22,
-                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                          child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2.5),
                                         )
-                                      : Text(
-                                          'Se connecter',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 16, fontWeight: FontWeight.w700,
-                                          ),
+                                      : Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Se connecter',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 16, fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Icon(Icons.arrow_forward_rounded, size: 20),
+                                          ],
                                         ),
                                 ),
                               ),
@@ -241,16 +335,92 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 22),
+
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.shield_outlined, size: 14, color: AppColors.muted),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Connexion sécurisée',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     'Version 1.0 · Scolia',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white.withOpacity(0.3)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted.withOpacity(0.6)),
                   ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Sélecteur de profil (Parent / Enseignant / Direction) — purement
+/// visuel : il adapte le libellé/l'indice affichés au-dessus des champs,
+/// mais l'identification réelle reste déterminée par les identifiants
+/// saisis (le rôle vient du compte, pas de cet onglet).
+class _SelecteurProfil extends StatelessWidget {
+  final _Profil profil;
+  final ValueChanged<_Profil> onChange;
+
+  const _SelecteurProfil({required this.profil, required this.onChange});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.light,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: _Profil.values.map((p) {
+          final selectionne = p == profil;
+          final info = _profils[p]!;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChange(p),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: selectionne ? AppColors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: selectionne
+                      ? [BoxShadow(color: AppColors.navy.withOpacity(0.12), blurRadius: 10, offset: const Offset(0, 4))]
+                      : null,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(info.icone, size: 18, color: selectionne ? AppColors.navy : AppColors.muted),
+                    const SizedBox(height: 4),
+                    Text(
+                      info.libelle,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: selectionne ? FontWeight.w700 : FontWeight.w500,
+                        color: selectionne ? AppColors.navy : AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
