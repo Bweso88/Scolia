@@ -12,8 +12,9 @@ import '../../services/messaging_service.dart';
 class ConversationScreen extends StatefulWidget {
   final int conversationId;
   final String titre;
+  final String? sousTitre;
 
-  const ConversationScreen({super.key, required this.conversationId, required this.titre});
+  const ConversationScreen({super.key, required this.conversationId, required this.titre, this.sousTitre});
 
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
@@ -85,7 +86,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final fermee = estParent && (tenant?.messagerieFermee ?? false);
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.titre)),
+      appBar: AppBar(
+        title: Text(widget.titre),
+        bottom: widget.sousTitre != null
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(20),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    widget.sousTitre!,
+                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.white.withOpacity(0.8)),
+                  ),
+                ),
+              )
+            : null,
+      ),
       body: Column(
         children: [
           Expanded(

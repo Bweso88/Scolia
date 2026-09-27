@@ -65,6 +65,47 @@ class ParentMessagingTest extends TestCase
         $response->assertJsonPath('direction.0.name', 'Aminata Diallo');
     }
 
+    public function test_conversation_list_includes_the_student_and_class_it_concerns(): void
+    {
+        $tenant = Tenant::factory()->create();
+        app(PermissionRegistrar::class)->setPermissionsTeamId($tenant->id);
+
+        $teacherUser = User::factory()->for($tenant)->create();
+        $teacherUser->assignRole('teacher');
+        $teacher = Teacher::factory()->for($tenant)->create(['user_id' => $teacherUser->id]);
+
+        $class = SchoolClass::factory()->for($tenant)->create(['name' => 'CM2 A']);
+        $subject = Subject::factory()->for($tenant)->create();
+        app(TenantContext::class)->set($tenant);
+        TeacherAssignment::create([
+            'teacher_id' => $teacher->id,
+            'school_class_id' => $class->id,
+            'subject_id' => $subject->id,
+        ]);
+        $teacher->messagingPermission()->create(['can_be_contacted_directly' => true]);
+
+        $parent = User::factory()->for($tenant)->create(['name' => 'Fatou Kane']);
+        $parent->assignRole('parent');
+        $student = Student::factory()->for($tenant)->for($class, 'schoolClass')->create(['first_name' => 'Awa', 'last_name' => 'Kane']);
+        $student->guardians()->attach($parent->id, ['tenant_id' => $tenant->id, 'relationship_type' => 'parent']);
+
+        $this->actingAs($parent, 'sanctum')
+            ->postJson('/api/v1/admin/conversations', [
+                'participant_user_id' => $teacherUser->id,
+                'student_id' => $student->id,
+                'body' => 'Bonjour, une question sur les devoirs de Awa.',
+            ])
+            ->assertCreated();
+
+        $response = $this->actingAs($teacherUser, 'sanctum')
+            ->getJson('/api/v1/admin/conversations')
+            ->assertOk();
+
+        $response->assertJsonPath('data.0.student.first_name', 'Awa');
+        $response->assertJsonPath('data.0.student.last_name', 'Kane');
+        $response->assertJsonPath('data.0.student.school_class.name', 'CM2 A');
+    }
+
     public function test_a_parent_can_always_message_the_direction(): void
     {
         $tenant = Tenant::factory()->create();

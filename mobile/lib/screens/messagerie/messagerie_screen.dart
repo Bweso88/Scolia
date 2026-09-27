@@ -72,14 +72,31 @@ class _MessagerieScreenState extends State<MessagerieScreen> {
                           child: const Icon(Icons.person_outline, color: AppColors.navy),
                         ),
                         title: Text(c.interlocuteur(moi), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
-                        subtitle: Text(
-                          c.lastMessage ?? c.subject ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (c.contexteEleve != null)
+                              Text(
+                                c.contexteEleve!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+                              ),
+                            Text(
+                              c.lastMessage ?? c.subject ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+                            ),
+                          ],
                         ),
                         onTap: () async {
-                          await context.push('/messagerie/conversation', extra: {'id': c.id, 'titre': c.interlocuteur(moi)});
+                          await context.push('/messagerie/conversation', extra: {
+                            'id': c.id,
+                            'titre': c.interlocuteur(moi),
+                            'sousTitre': c.contexteEleve,
+                          });
                           _charger();
                         },
                       );

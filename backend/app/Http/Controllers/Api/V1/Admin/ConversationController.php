@@ -17,7 +17,7 @@ class ConversationController extends Controller
 
         $conversations = Conversation::query()
             ->whereHas('participants', fn ($q) => $q->whereKey(request()->user()->id))
-            ->with(['participants', 'messages'])
+            ->with(['participants', 'messages', 'student.schoolClass'])
             ->latest('updated_at')
             ->paginate();
 
@@ -51,14 +51,14 @@ class ConversationController extends Controller
             return $conversation;
         });
 
-        return new ConversationResource($conversation->load(['participants', 'messages']));
+        return new ConversationResource($conversation->load(['participants', 'messages', 'student.schoolClass']));
     }
 
     public function show(Conversation $conversation)
     {
         $this->authorize('view', $conversation);
 
-        return new ConversationResource($conversation->load(['participants', 'messages.sender']));
+        return new ConversationResource($conversation->load(['participants', 'messages.sender', 'student.schoolClass']));
     }
 
     private function roleInThread(User $user): string

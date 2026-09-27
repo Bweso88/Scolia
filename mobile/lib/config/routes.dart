@@ -71,7 +71,11 @@ GoRouter buildRouter(BuildContext context) {
         path: '/messagerie/conversation',
         builder: (_, state) {
           final extra = state.extra as Map<String, dynamic>;
-          return ConversationScreen(conversationId: extra['id'] as int, titre: extra['titre'] as String);
+          return ConversationScreen(
+            conversationId: extra['id'] as int,
+            titre: extra['titre'] as String,
+            sousTitre: extra['sousTitre'] as String?,
+          );
         },
       ),
       GoRoute(path: '/gestion',              builder: (_, __) => const GestionScreen()),
