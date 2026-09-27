@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/theme.dart';
+import '../../models/school_class_admin.dart';
 import '../../models/student.dart';
+import '../../services/gestion_service.dart';
 import '../../services/student_service.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/success_toast.dart';
@@ -16,23 +18,39 @@ class ElevesGestionScreen extends StatefulWidget {
 
 class _ElevesGestionScreenState extends State<ElevesGestionScreen> {
   final _service = StudentService();
+  final _gestionService = GestionService();
   List<Student> _eleves = [];
+  List<SchoolClassAdmin> _classes = [];
+  int? _classeFiltre;
   bool _charge = false;
 
   @override
   void initState() {
     super.initState();
+    _chargerClasses();
     _charger();
+  }
+
+  Future<void> _chargerClasses() async {
+    try {
+      _classes = await _gestionService.getClasses();
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   Future<void> _charger() async {
     setState(() => _charge = true);
     try {
-      _eleves = await _service.getEleves();
+      _eleves = await _service.getEleves(schoolClassId: _classeFiltre);
     } catch (_) {
     } finally {
       if (mounted) setState(() => _charge = false);
     }
+  }
+
+  void _filtrerParClasse(int? classeId) {
+    setState(() => _classeFiltre = classeId);
+    _charger();
   }
 
   Future<void> _basculerActivation(int index, bool actif) async {
@@ -67,42 +85,75 @@ class _ElevesGestionScreenState extends State<ElevesGestionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Élèves')),
-      body: RefreshIndicator(
-        onRefresh: _charger,
-        child: _charge
-            ? const Center(child: CircularProgressIndicator())
-            : _eleves.isEmpty
-                ? EmptyState(
-                    message: 'Aucun élève',
-                    sousTitre: 'Inscrivez le premier élève de l\'école.',
-                    icone: Icons.people_outline,
-                    onAction: _charger,
-                    libelleAction: 'Actualiser',
-                  )
-                : ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: _eleves.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) {
-                      final e = _eleves[i];
-                      return ListTile(
-                        title: Text(e.nomComplet, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
-                        subtitle: Text(
-                          e.schoolClass?.name ?? '—',
-                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+      body: Column(
+        children: [
+          if (_classes.isNotEmpty)
+            SizedBox(
+              height: 48,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                itemCount: _classes.length + 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  if (i == 0) {
+                    return ChoiceChip(
+                      label: const Text('Toutes les classes'),
+                      selected: _classeFiltre == null,
+                      onSelected: (_) => _filtrerParClasse(null),
+                    );
+                  }
+                  final c = _classes[i - 1];
+                  return ChoiceChip(
+                    label: Text(c.name),
+                    selected: _classeFiltre == c.id,
+                    onSelected: (_) => _filtrerParClasse(c.id),
+                  );
+                },
+              ),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _charger,
+              child: _charge
+                  ? const Center(child: CircularProgressIndicator())
+                  : _eleves.isEmpty
+                      ? EmptyState(
+                          message: 'Aucun élève',
+                          sousTitre: _classeFiltre != null
+                              ? 'Aucun élève dans cette classe.'
+                              : 'Inscrivez le premier élève de l\'école.',
+                          icone: Icons.people_outline,
+                          onAction: _charger,
+                          libelleAction: 'Actualiser',
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: _eleves.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (_, i) {
+                            final e = _eleves[i];
+                            return ListTile(
+                              title: Text(e.nomComplet, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+                              subtitle: Text(
+                                e.schoolClass?.name ?? '—',
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+                              ),
+                              trailing: Switch.adaptive(
+                                value: e.isActivated,
+                                activeThumbColor: AppColors.green,
+                                onChanged: (valeur) => _basculerActivation(i, valeur),
+                              ),
+                              onTap: () async {
+                                final modifie = await context.push<bool>('/gestion/eleves/creer', extra: e);
+                                if (modifie == true) _charger();
+                              },
+                            );
+                          },
                         ),
-                        trailing: Switch.adaptive(
-                          value: e.isActivated,
-                          activeThumbColor: AppColors.green,
-                          onChanged: (valeur) => _basculerActivation(i, valeur),
-                        ),
-                        onTap: () async {
-                          final modifie = await context.push<bool>('/gestion/eleves/creer', extra: e);
-                          if (modifie == true) _charger();
-                        },
-                      );
-                    },
-                  ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {

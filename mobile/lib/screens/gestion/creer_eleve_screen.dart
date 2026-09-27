@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -108,54 +109,15 @@ class _CreerEleveScreenState extends State<CreerEleveScreen> {
   }
 
   Future<void> _ajouterParent() async {
-    final nomCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final mdpCtrl = TextEditingController();
-    String lien = 'mère';
-
-    final confirme = await showDialog<bool>(
+    final corps = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Ajouter un parent'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: nomCtrl, decoration: const InputDecoration(labelText: 'Nom complet')),
-                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-                TextField(controller: mdpCtrl, decoration: const InputDecoration(labelText: 'Mot de passe'), obscureText: true),
-                DropdownButtonFormField<String>(
-                  initialValue: lien,
-                  decoration: const InputDecoration(labelText: 'Lien de parenté'),
-                  items: const [
-                    DropdownMenuItem(value: 'mère', child: Text('Mère')),
-                    DropdownMenuItem(value: 'père', child: Text('Père')),
-                    DropdownMenuItem(value: 'tuteur', child: Text('Tuteur/tutrice')),
-                    DropdownMenuItem(value: 'autre', child: Text('Autre')),
-                  ],
-                  onChanged: (v) => setDialogState(() => lien = v!),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ajouter')),
-          ],
-        ),
-      ),
+      builder: (ctx) => _AjouterParentDialog(gestionService: _gestionService),
     );
 
-    if (confirme != true || nomCtrl.text.trim().isEmpty || emailCtrl.text.trim().isEmpty) return;
+    if (corps == null) return;
 
     try {
-      await _gestionService.lierParent(widget.eleve!.id, {
-        'name': nomCtrl.text.trim(),
-        'email': emailCtrl.text.trim(),
-        'password': mdpCtrl.text,
-        'relationship_type': lien,
-      });
+      await _gestionService.lierParent(widget.eleve!.id, corps);
       if (mounted) showSuccessToast(context, 'Parent lié à l\'élève.');
       _charger();
     } on Exception catch (e) {
@@ -270,6 +232,195 @@ class _CreerEleveScreenState extends State<CreerEleveScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// Dialogue "Ajouter un parent" : soit rattacher un parent déjà inscrit
+/// dans l'école (fratrie — recherche par nom/email), soit en créer un
+/// nouveau. Retourne le corps à envoyer à POST .../guardians, ou null si
+/// annulé.
+class _AjouterParentDialog extends StatefulWidget {
+  final GestionService gestionService;
+  const _AjouterParentDialog({required this.gestionService});
+
+  @override
+  State<_AjouterParentDialog> createState() => _AjouterParentDialogState();
+}
+
+class _AjouterParentDialogState extends State<_AjouterParentDialog> {
+  bool _parentExistant = true;
+  String _lien = 'mère';
+
+  // Onglet "parent existant"
+  final _rechercheCtrl = TextEditingController();
+  Timer? _debounce;
+  List<ParentSummary> _resultats = [];
+  ParentSummary? _selectionne;
+  bool _recherche = false;
+
+  // Onglet "nouveau parent"
+  final _nomCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _mdpCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _lancerRecherche('');
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _rechercheCtrl.dispose();
+    _nomCtrl.dispose();
+    _emailCtrl.dispose();
+    _mdpCtrl.dispose();
+    super.dispose();
+  }
+
+  void _surChangementRecherche(String valeur) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () => _lancerRecherche(valeur));
+  }
+
+  Future<void> _lancerRecherche(String valeur) async {
+    setState(() => _recherche = true);
+    try {
+      final resultats = await widget.gestionService.rechercherParents(valeur.trim());
+      if (mounted) setState(() => _resultats = resultats);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _recherche = false);
+    }
+  }
+
+  void _valider() {
+    final Map<String, dynamic> corps;
+    if (_parentExistant) {
+      if (_selectionne == null) return;
+      corps = {'user_id': _selectionne!.id, 'relationship_type': _lien};
+    } else {
+      if (_nomCtrl.text.trim().isEmpty || _emailCtrl.text.trim().isEmpty || _mdpCtrl.text.isEmpty) return;
+      corps = {
+        'name': _nomCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'password': _mdpCtrl.text,
+        'relationship_type': _lien,
+      };
+    }
+    Navigator.pop(context, corps);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final peutValider = _parentExistant
+        ? _selectionne != null
+        : _nomCtrl.text.trim().isNotEmpty && _emailCtrl.text.trim().isNotEmpty && _mdpCtrl.text.isNotEmpty;
+
+    return AlertDialog(
+      title: const Text('Ajouter un parent'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Parent existant')),
+                  ButtonSegment(value: false, label: Text('Nouveau parent')),
+                ],
+                selected: {_parentExistant},
+                onSelectionChanged: (s) => setState(() => _parentExistant = s.first),
+              ),
+              const SizedBox(height: 16),
+
+              if (_parentExistant) ...[
+                TextField(
+                  controller: _rechercheCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Rechercher (nom ou e-mail)',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (v) {
+                    setState(() => _selectionne = null);
+                    _surChangementRecherche(v);
+                  },
+                ),
+                const SizedBox(height: 8),
+                if (_recherche)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_resultats.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text('Aucun parent trouvé.', style: TextStyle(color: AppColors.muted)),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _resultats.length,
+                      itemBuilder: (_, i) {
+                        final p = _resultats[i];
+                        final selectionne = p.id == _selectionne?.id;
+                        return ListTile(
+                          dense: true,
+                          selected: selectionne,
+                          selectedTileColor: AppColors.light,
+                          title: Text(p.name),
+                          subtitle: Text(p.email),
+                          trailing: selectionne ? const Icon(Icons.check_circle, color: AppColors.green) : null,
+                          onTap: () => setState(() => _selectionne = p),
+                        );
+                      },
+                    ),
+                  ),
+              ] else ...[
+                TextField(
+                  controller: _nomCtrl,
+                  decoration: const InputDecoration(labelText: 'Nom complet'),
+                  onChanged: (_) => setState(() {}),
+                ),
+                TextField(
+                  controller: _emailCtrl,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  onChanged: (_) => setState(() {}),
+                ),
+                TextField(
+                  controller: _mdpCtrl,
+                  decoration: const InputDecoration(labelText: 'Mot de passe'),
+                  obscureText: true,
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
+
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: _lien,
+                decoration: const InputDecoration(labelText: 'Lien de parenté'),
+                items: const [
+                  DropdownMenuItem(value: 'mère', child: Text('Mère')),
+                  DropdownMenuItem(value: 'père', child: Text('Père')),
+                  DropdownMenuItem(value: 'tuteur', child: Text('Tuteur/tutrice')),
+                  DropdownMenuItem(value: 'autre', child: Text('Autre')),
+                ],
+                onChanged: (v) => setState(() => _lien = v!),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        FilledButton(onPressed: peutValider ? _valider : null, child: const Text('Ajouter')),
+      ],
     );
   }
 }

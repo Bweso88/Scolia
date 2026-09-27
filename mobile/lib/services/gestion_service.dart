@@ -46,6 +46,11 @@ class GestionService {
     await apiService.delete('/admin/teachers/$id');
   }
 
+  Future<List<ParentSummary>> rechercherParents(String recherche) async {
+    final data = await apiService.get('/admin/parents', params: recherche.isEmpty ? null : {'search': recherche});
+    return (data['data'] as List).map((e) => ParentSummary.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
   Future<List<StudentGuardianAdmin>> getParents(int studentId) async {
     final data = await apiService.get('/admin/students/$studentId/guardians');
     return (data['data'] as List).map((e) => StudentGuardianAdmin.fromJson(e as Map<String, dynamic>)).toList();

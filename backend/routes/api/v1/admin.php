@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Admin\GradingPeriodController;
 use App\Http\Controllers\Api\V1\Admin\HomeworkController;
 use App\Http\Controllers\Api\V1\Admin\MessageController;
 use App\Http\Controllers\Api\V1\Admin\MessagingPermissionController;
+use App\Http\Controllers\Api\V1\Admin\ParentController;
 use App\Http\Controllers\Api\V1\Admin\SchoolClassController;
 use App\Http\Controllers\Api\V1\Admin\SchoolYearController;
 use App\Http\Controllers\Api\V1\Admin\StudentActivationController;
@@ -36,6 +37,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('students.activation');
     Route::apiResource('students.guardians', StudentGuardianController::class)
         ->only(['index', 'store', 'destroy']);
+    Route::get('parents', [ParentController::class, 'index'])->name('parents.index');
 
     Route::apiResource('school-classes', SchoolClassController::class);
     Route::get('school-years', [SchoolYearController::class, 'index'])->name('school-years.index');
