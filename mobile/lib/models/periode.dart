@@ -1,23 +1,14 @@
+/// Une période de notation, telle que renvoyée par GradingPeriodResource.
 class Periode {
   final int id;
   final String nom;
-  final String? dateDebut;
-  final String? dateFin;
-  final String? anneeScolaire;
+  final int schoolYearId;
 
-  const Periode({
-    required this.id,
-    required this.nom,
-    this.dateDebut,
-    this.dateFin,
-    this.anneeScolaire,
-  });
+  const Periode({required this.id, required this.nom, required this.schoolYearId});
 
   factory Periode.fromJson(Map<String, dynamic> j) => Periode(
-        id:            j['id'] as int,
-        nom:           j['nom'] as String,
-        dateDebut:     j['date_debut'] as String?,
-        dateFin:       j['date_fin'] as String?,
-        anneeScolaire: j['annee_scolaire'] as String?,
+        id:           j['id'] as int,
+        nom:          j['label'] as String,
+        schoolYearId: j['school_year_id'] as int,
       );
 }
