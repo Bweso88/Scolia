@@ -86,7 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(child: _entete(context, user, branding, couleurPrimaire)),
+            SliverToBoxAdapter(
+              child: AnimatedEntry(index: 0, child: _entete(context, user, branding, couleurPrimaire)),
+            ),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.only(top: 16, bottom: 16),
@@ -114,7 +116,27 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
         boxShadow: [BoxShadow(color: couleurPrimaire.withOpacity(0.25), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Row(
+      child: Stack(
+        children: [
+          // Touche décorative, discrète — évite un aplat de couleur trop plat.
+          // Volontairement dans les bornes du bandeau (pas d'offset négatif)
+          // pour ne jamais déborder du cadre arrondi.
+          Positioned(
+            right: 4, top: 2,
+            child: Icon(Icons.school_rounded, size: 84, color: AppColors.white.withOpacity(0.06)),
+          ),
+          Positioned(
+            right: 64, bottom: 4,
+            child: Icon(Icons.auto_stories_rounded, size: 40, color: AppColors.white.withOpacity(0.07)),
+          ),
+          _enteteContenu(context, user, branding),
+        ],
+      ),
+    );
+  }
+
+  Widget _enteteContenu(BuildContext context, dynamic user, dynamic branding) {
+    return Row(
         children: [
           Container(
             width: 44, height: 44,
@@ -158,8 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(width: 10),
           _BoutonRond(icone: Icons.person_outline, onTap: () => context.push('/profil')),
         ],
-      ),
-    );
+      );
   }
 
   Widget _initialesWidget(String? nom) {
@@ -193,19 +214,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return [
       const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: ChildSelector()),
       const SizedBox(height: 16),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: _carteBienvenue(
-          nbDevoirs == 0
-              ? 'Aujourd\'hui, tout se passe pour le mieux à l\'école.'
-              : '$nbDevoirs devoir${nbDevoirs > 1 ? 's' : ''} à préparer pour aujourd\'hui.',
+      AnimatedEntry(
+        index: 0,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _carteBienvenue(
+            nbDevoirs == 0
+                ? 'Aujourd\'hui, tout se passe pour le mieux à l\'école.'
+                : '$nbDevoirs devoir${nbDevoirs > 1 ? 's' : ''} à préparer pour aujourd\'hui.',
+          ),
         ),
       ),
       const SizedBox(height: 20),
       if (_chargeDashboard)
         const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
       else if (dashboard != null)
-        Padding(
+        AnimatedEntry(
+          index: 1,
+          child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
@@ -230,6 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+        ),
         ),
       const SizedBox(height: 24),
       _titreSection('Accès rapide'),

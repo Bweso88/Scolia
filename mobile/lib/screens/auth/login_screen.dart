@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -45,7 +46,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final _formKey        = GlobalKey<FormState>();
   final _emailCtrl      = TextEditingController();
   final _motDePasseCtrl = TextEditingController();
@@ -54,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   late  AnimationController _animCtrl;
   late  Animation<Offset>   _slideAnim;
   late  Animation<double>   _fadeAnim;
+  late  AnimationController _flotteCtrl;
 
   @override
   void initState() {
@@ -63,11 +65,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
     _fadeAnim  = CurvedAnimation(parent: _animCtrl, curve: Curves.easeIn);
     _animCtrl.forward();
+    // Petites icônes qui flottent doucement en fond — un clin d'œil à
+    // l'école (livre, crayon, règle...) pour humaniser l'écran de connexion.
+    _flotteCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
   }
 
   @override
   void dispose() {
     _animCtrl.dispose();
+    _flotteCtrl.dispose();
     _emailCtrl.dispose();
     _motDePasseCtrl.dispose();
     super.dispose();
@@ -112,7 +118,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             colors: [AppColors.light, AppColors.white],
           ),
         ),
-        child: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(child: _IconesFlottantes(animation: _flotteCtrl)),
+            SafeArea(
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
@@ -361,6 +370,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             ),
           ),
         ),
+          ],
+        ),
       ),
     );
   }
@@ -421,6 +432,55 @@ class _SelecteurProfil extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+/// Quelques icônes (livre, crayon, règle, étoile, trophée) qui flottent
+/// doucement en arrière-plan de l'écran de connexion — une touche "ambiance
+/// école", discrète (opacité très faible) pour ne pas gêner la lecture.
+class _IconesFlottantes extends StatelessWidget {
+  final Animation<double> animation;
+
+  const _IconesFlottantes({required this.animation});
+
+  static const _icones = <(IconData, double, double, double, Color)>[
+    (Icons.auto_stories_rounded, 0.10, 0.10, 0.0, AppColors.navy),
+    (Icons.edit_rounded, 0.82, 0.08, 1.4, AppColors.amber),
+    (Icons.emoji_events_rounded, 0.08, 0.60, 2.6, AppColors.amber),
+    (Icons.star_rounded, 0.88, 0.46, 0.8, AppColors.navy),
+    (Icons.calculate_rounded, 0.76, 0.26, 3.6, AppColors.navy),
+    (Icons.backpack_rounded, 0.06, 0.34, 4.6, AppColors.amber),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final taille = MediaQuery.of(context).size;
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          return Stack(
+            children: _icones.map((spec) {
+              final (icone, gauche, haut, phase, couleur) = spec;
+              final t = animation.value * 2 * math.pi + phase;
+              final dy = math.sin(t) * 12;
+              final dx = math.cos(t * 0.7) * 7;
+              return Positioned(
+                left: taille.width * gauche,
+                top: taille.height * haut,
+                child: Transform.translate(
+                  offset: Offset(dx, dy),
+                  child: Transform.rotate(
+                    angle: math.sin(t * 0.5) * 0.10,
+                    child: Icon(icone, size: 30, color: couleur.withOpacity(0.07)),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
