@@ -12,6 +12,7 @@ class ProfilScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
+    final branding = user?.tenant;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mon profil')),
@@ -24,13 +25,13 @@ class ProfilScreen extends StatelessWidget {
               radius: 44,
               backgroundColor: AppColors.navy,
               child: Text(
-                (user?.prenom?.isNotEmpty == true ? user!.prenom![0] : '?').toUpperCase(),
+                (user?.name.isNotEmpty == true ? user!.name[0] : '?').toUpperCase(),
                 style: GoogleFonts.plusJakartaSans(fontSize: 36, fontWeight: FontWeight.w800, color: AppColors.white),
               ),
             ),
             const SizedBox(height: 14),
             Text(
-              user?.nomComplet ?? '—',
+              user?.name ?? '—',
               style: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.navy),
             ),
             const SizedBox(height: 4),
@@ -38,7 +39,7 @@ class ProfilScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(color: AppColors.light, borderRadius: BorderRadius.circular(8)),
               child: Text(
-                _libelleRole(user?.role),
+                _libelleRoles(user?.roles ?? const []),
                 style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w600),
               ),
             ),
@@ -46,13 +47,50 @@ class ProfilScreen extends StatelessWidget {
             Card(
               child: Column(
                 children: [
-                  _LigneProfil(icone: Icons.phone_outlined,  label: 'Téléphone', valeur: user?.telephone ?? '—'),
-                  const Divider(height: 1, indent: 56),
-                  _LigneProfil(icone: Icons.school_outlined, label: 'Rôle', valeur: _libelleRole(user?.role)),
+                  _LigneProfil(icone: Icons.mail_outline,  label: 'E-mail', valeur: user?.email ?? '—'),
+                  if (user?.phone != null) ...[
+                    const Divider(height: 1, indent: 56),
+                    _LigneProfil(icone: Icons.phone_outlined, label: 'Téléphone', valeur: user!.phone!),
+                  ],
+                  if (branding != null) ...[
+                    const Divider(height: 1, indent: 56),
+                    _LigneProfil(icone: Icons.school_outlined, label: 'École', valeur: branding.displayName),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.notifications_outlined, color: AppColors.navy),
+                label: Text('Préférences de notifications', style: GoogleFonts.plusJakartaSans(color: AppColors.navy, fontWeight: FontWeight.w600)),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.border),
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => context.push('/profil/notifications'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (auth.aPlusieursEcoles)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.swap_horiz, color: AppColors.navy),
+                    label: Text('Changer d\'école', style: GoogleFonts.plusJakartaSans(color: AppColors.navy, fontWeight: FontWeight.w600)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.border),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => context.push('/auth/ecole'),
+                  ),
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -72,14 +110,16 @@ class ProfilScreen extends StatelessWidget {
     );
   }
 
-  String _libelleRole(String? role) {
-    switch (role) {
-      case 'parent':       return 'Parent';
-      case 'teacher':      return 'Enseignant';
-      case 'school_admin': return 'Administrateur';
-      case 'super_admin':  return 'Super administrateur';
-      default:             return role ?? '—';
-    }
+  String _libelleRoles(List<String> roles) {
+    const libelles = {
+      'parent': 'Parent',
+      'teacher': 'Enseignant',
+      'school_admin': 'Administrateur',
+      'direction': 'Direction',
+      'surveillant': 'Surveillant',
+    };
+    if (roles.isEmpty) return '—';
+    return roles.map((r) => libelles[r] ?? r).join(', ');
   }
 
   Future<void> _confirmerDeconnexion(BuildContext context) async {
@@ -99,7 +139,7 @@ class ProfilScreen extends StatelessWidget {
     );
     if (confirme == true && context.mounted) {
       await context.read<AuthProvider>().deconnexion();
-      context.go('/auth/telephone');
+      context.go('/auth/connexion');
     }
   }
 }
