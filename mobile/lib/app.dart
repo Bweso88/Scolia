@@ -38,24 +38,45 @@ class _ScoliaAppState extends State<ScoliaApp> {
           },
         ),
       ],
-      child: Builder(
-        builder: (context) {
-          NotificationService.onMessageReceived ??= () => context.read<NotificationsProvider>().charger();
-          NotificationService.onTokenRefreshed ??= (token) => context.read<AuthProvider>().renvoyerTokenFCM(token);
-          final router = buildRouter(context);
-          // Couleurs de l'école connectée appliquées à l'ensemble de
-          // l'application (docs/PRODUCT_ARCHITECTURE.md §16) ; à défaut
-          // (avant connexion), l'identité visuelle Scolia par défaut.
-          final branding = context.watch<AuthProvider>().user?.tenant;
-          return MaterialApp.router(
-            title: branding?.displayName ?? 'Scolia',
-            theme: buildTheme(primary: branding?.primaryColor, secondary: branding?.secondaryColor),
-            routerConfig: router,
-            debugShowCheckedModeBanner: false,
-            locale: const Locale('fr', 'FR'),
-          );
-        },
-      ),
+      child: const _RouterHost(),
+    );
+  }
+}
+
+/// Construit le [GoRouter] une seule fois (dans [initState]) plutôt qu'à
+/// chaque reconstruction : recréer un GoRouter à chaque notification de
+/// [AuthProvider] (ex. juste après la connexion) le faisait repartir de
+/// [initialLocation] ('/'), renvoyant l'utilisateur sur l'écran de
+/// démarrage au lieu de poursuivre sa navigation.
+class _RouterHost extends StatefulWidget {
+  const _RouterHost();
+
+  @override
+  State<_RouterHost> createState() => _RouterHostState();
+}
+
+class _RouterHostState extends State<_RouterHost> {
+  late final router = buildRouter(context);
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.onMessageReceived ??= () => context.read<NotificationsProvider>().charger();
+    NotificationService.onTokenRefreshed ??= (token) => context.read<AuthProvider>().renvoyerTokenFCM(token);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Couleurs de l'école connectée appliquées à l'ensemble de
+    // l'application (docs/PRODUCT_ARCHITECTURE.md §16) ; à défaut
+    // (avant connexion), l'identité visuelle Scolia par défaut.
+    final branding = context.watch<AuthProvider>().user?.tenant;
+    return MaterialApp.router(
+      title: branding?.displayName ?? 'Scolia',
+      theme: buildTheme(primary: branding?.primaryColor, secondary: branding?.secondaryColor),
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('fr', 'FR'),
     );
   }
 }

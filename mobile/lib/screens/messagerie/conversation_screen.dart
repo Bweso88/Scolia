@@ -152,7 +152,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _charge
+            child: Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/chat_background.png'),
+                  repeat: ImageRepeat.repeat,
+                ),
+              ),
+              child: _charge
                 ? const Center(child: CircularProgressIndicator())
                 : ListView.builder(
                     controller: _scrollCtrl,
@@ -161,6 +168,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     itemBuilder: (_, i) {
                       final m = _messages[i];
                       final deMoi = m.senderId == moi;
+                      // Couleur fixe par rôle (pas "moi/l'autre") : un parent
+                      // garde toujours la même couleur, vu par n'importe qui.
+                      final messageDuParent = estParent ? deMoi : !deMoi;
+                      final couleurBulle = messageDuParent ? AppColors.blue : AppColors.navy;
                       final precedent = i > 0 ? _messages[i - 1] : null;
                       final nouveauJour = _jourDe(m.createdAt) != _jourDe(precedent?.createdAt);
 
@@ -182,46 +193,39 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                   ],
                                   ConstrainedBox(
                                     constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.68),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                      decoration: BoxDecoration(
-                                        color: deMoi ? AppColors.navy : AppColors.light,
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: const Radius.circular(16),
-                                          topRight: const Radius.circular(16),
-                                          bottomLeft: Radius.circular(deMoi ? 16 : 4),
-                                          bottomRight: Radius.circular(deMoi ? 4 : 16),
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: (deMoi ? AppColors.navy : AppColors.navy.withOpacity(0.5)).withOpacity(0.08),
-                                            blurRadius: 8, offset: const Offset(0, 3),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          if (!deMoi && m.senderName != null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(bottom: 2),
-                                              child: Text(m.senderName!,
-                                                  style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.muted)),
-                                            ),
-                                          Text(m.body, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: deMoi ? AppColors.white : AppColors.body)),
-                                          if (m.createdAt != null)
-                                            Padding(
-                                              padding: const EdgeInsets.only(top: 4),
-                                              child: Text(
-                                                DateFormat('HH:mm', 'fr_FR').format(DateTime.parse(m.createdAt!).toLocal()),
-                                                style: GoogleFonts.plusJakartaSans(
-                                                  fontSize: 10,
-                                                  color: deMoi ? AppColors.white.withOpacity(0.55) : AppColors.muted,
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: PhysicalShape(
+                                        clipper: _BulleClipper(queueADroite: deMoi),
+                                        color: couleurBulle,
+                                        elevation: 4,
+                                        shadowColor: AppColors.navy.withOpacity(0.38),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              if (!deMoi && m.senderName != null)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(bottom: 2),
+                                                  child: Text(m.senderName!,
+                                                      style: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.white.withOpacity(0.75))),
                                                 ),
-                                              ),
-                                            ),
-                                        ],
+                                              Text(m.body, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.white)),
+                                              if (m.createdAt != null)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 4),
+                                                  child: Text(
+                                                    DateFormat('HH:mm', 'fr_FR').format(DateTime.parse(m.createdAt!).toLocal()),
+                                                    style: GoogleFonts.plusJakartaSans(
+                                                      fontSize: 10,
+                                                      color: AppColors.white.withOpacity(0.6),
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -233,6 +237,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       );
                     },
                   ),
+            ),
           ),
           SafeArea(
             child: Padding(
@@ -293,4 +298,61 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ),
     );
   }
+}
+
+/// Forme de bulle de discussion avec une petite "queue" sur le côté —
+/// à droite pour mes messages, à gauche pour ceux de l'interlocuteur,
+/// comme sur WhatsApp — plutôt qu'un simple rectangle arrondi.
+class _BulleClipper extends CustomClipper<Path> {
+  final bool queueADroite;
+  const _BulleClipper({required this.queueADroite});
+
+  static const _rayon = 16.0;
+  static const _petitRayon = 4.0;
+  static const _queueLargeur = 7.0;
+
+  @override
+  Path getClip(Size size) {
+    final l = size.width;
+    final h = size.height;
+    final path = Path();
+
+    if (queueADroite) {
+      path.addRRect(RRect.fromRectAndCorners(
+        Rect.fromLTWH(0, 0, l - _queueLargeur, h),
+        topLeft: const Radius.circular(_rayon),
+        topRight: const Radius.circular(_rayon),
+        bottomLeft: const Radius.circular(_rayon),
+        bottomRight: const Radius.circular(_petitRayon),
+      ));
+      path.addPath(
+        Path()
+          ..moveTo(l - _queueLargeur, h - _rayon * 0.9)
+          ..quadraticBezierTo(l - _queueLargeur, h - 1, l, h)
+          ..lineTo(l - _queueLargeur - 2, h - 1)
+          ..close(),
+        Offset.zero,
+      );
+    } else {
+      path.addRRect(RRect.fromRectAndCorners(
+        Rect.fromLTWH(_queueLargeur, 0, l - _queueLargeur, h),
+        topLeft: const Radius.circular(_rayon),
+        topRight: const Radius.circular(_rayon),
+        bottomLeft: const Radius.circular(_petitRayon),
+        bottomRight: const Radius.circular(_rayon),
+      ));
+      path.addPath(
+        Path()
+          ..moveTo(_queueLargeur, h - _rayon * 0.9)
+          ..quadraticBezierTo(_queueLargeur, h - 1, 0, h)
+          ..lineTo(_queueLargeur + 2, h - 1)
+          ..close(),
+        Offset.zero,
+      );
+    }
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant _BulleClipper oldClipper) => oldClipper.queueADroite != queueADroite;
 }

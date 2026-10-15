@@ -5,39 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import '../../widgets/falling_emoji_overlay.dart';
 import '../../widgets/pill_badge.dart';
-
-enum _Profil { parent, enseignant, direction }
-
-class _ProfilInfo {
-  final String libelle;
-  final IconData icone;
-  final String badge;
-  final String indice;
-
-  const _ProfilInfo({required this.libelle, required this.icone, required this.badge, required this.indice});
-}
-
-const _profils = {
-  _Profil.parent: _ProfilInfo(
-    libelle: 'Parent',
-    icone: Icons.family_restroom_rounded,
-    badge: 'Compte responsable',
-    indice: 'marie.dupont@email.fr',
-  ),
-  _Profil.enseignant: _ProfilInfo(
-    libelle: 'Enseignant',
-    icone: Icons.menu_book_rounded,
-    badge: 'Compte enseignant',
-    indice: 'prof.diallo@ecole.tld',
-  ),
-  _Profil.direction: _ProfilInfo(
-    libelle: 'Direction',
-    icone: Icons.corporate_fare_rounded,
-    badge: 'Compte direction',
-    indice: 'direction@ecole.tld',
-  ),
-};
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   final _emailCtrl      = TextEditingController();
   final _motDePasseCtrl = TextEditingController();
   bool  _motDePasseVisible = false;
-  _Profil _profil = _Profil.parent;
   late  AnimationController _animCtrl;
   late  Animation<Offset>   _slideAnim;
   late  Animation<double>   _fadeAnim;
@@ -87,11 +55,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       if (!mounted) return;
       // Un compte lié à plusieurs écoles doit choisir laquelle consulter
       // avant d'entrer (docs/PRODUCT_ARCHITECTURE.md §9).
-      if (auth.aPlusieursEcoles) {
-        context.go('/auth/ecole');
-      } else {
-        context.go('/accueil');
-      }
+      final destination = auth.aPlusieursEcoles ? '/auth/ecole' : '/accueil';
+      _jouerAnimationConnexion(destination);
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -104,10 +69,24 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
+  /// Petite animation ludique jouée juste après la connexion, avant
+  /// d'entrer dans l'application (docs/PRODUCT_ARCHITECTURE.md — accueil).
+  void _jouerAnimationConnexion(String destination) {
+    late OverlayEntry entree;
+    entree = OverlayEntry(
+      builder: (_) => FallingEmojiOverlay(
+        onDone: () {
+          entree.remove();
+          if (mounted) context.go(destination);
+        },
+      ),
+    );
+    Overlay.of(context).insert(entree);
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final info = _profils[_profil]!;
 
     return Scaffold(
       body: Container(
@@ -191,21 +170,10 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
                   const SizedBox(height: 24),
 
-                  // ── Sélecteur de profil ──────────────────────────────
-                  SlideTransition(
-                    position: _slideAnim,
-                    child: FadeTransition(
-                      opacity: _fadeAnim,
-                      child: _SelecteurProfil(
-                        profil: _profil,
-                        onChange: (p) => setState(() => _profil = p),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
                   // ── Card connexion ───────────────────────────────────
+                  // Un formulaire unique pour tous (parent, enseignant,
+                  // direction) : c'est le compte, côté serveur, qui porte
+                  // le rôle — pas un onglet choisi ici.
                   SlideTransition(
                     position: _slideAnim,
                     child: FadeTransition(
@@ -228,25 +196,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'IDENTIFIANT',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 11, fontWeight: FontWeight.w700,
-                                      color: AppColors.muted, letterSpacing: 0.6,
-                                    ),
-                                  ),
-                                  AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 250),
-                                    child: PillBadge(
-                                      key: ValueKey(info.badge),
-                                      label: info.badge,
-                                      couleur: AppColors.amber,
-                                    ),
-                                  ),
-                                ],
+                              Text(
+                                'IDENTIFIANT',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11, fontWeight: FontWeight.w700,
+                                  color: AppColors.muted, letterSpacing: 0.6,
+                                ),
                               ),
                               const SizedBox(height: 8),
 
@@ -256,9 +211,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 keyboardType: TextInputType.emailAddress,
                                 autofillHints: const [AutofillHints.username],
                                 style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
-                                decoration: InputDecoration(
-                                  hintText: info.indice,
-                                  prefixIcon: const Icon(Icons.mail_outline),
+                                decoration: const InputDecoration(
+                                  hintText: 'vous@exemple.fr',
+                                  prefixIcon: Icon(Icons.mail_outline),
                                 ),
                                 validator: (v) {
                                   if (v == null || !v.contains('@')) return 'E-mail invalide';
@@ -372,66 +327,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// Sélecteur de profil (Parent / Enseignant / Direction) — purement
-/// visuel : il adapte le libellé/l'indice affichés au-dessus des champs,
-/// mais l'identification réelle reste déterminée par les identifiants
-/// saisis (le rôle vient du compte, pas de cet onglet).
-class _SelecteurProfil extends StatelessWidget {
-  final _Profil profil;
-  final ValueChanged<_Profil> onChange;
-
-  const _SelecteurProfil({required this.profil, required this.onChange});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.light,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: _Profil.values.map((p) {
-          final selectionne = p == profil;
-          final info = _profils[p]!;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onChange(p),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: selectionne ? AppColors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: selectionne
-                      ? [BoxShadow(color: AppColors.navy.withOpacity(0.12), blurRadius: 10, offset: const Offset(0, 4))]
-                      : null,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(info.icone, size: 18, color: selectionne ? AppColors.navy : AppColors.muted),
-                    const SizedBox(height: 4),
-                    Text(
-                      info.libelle,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: selectionne ? FontWeight.w700 : FontWeight.w500,
-                        color: selectionne ? AppColors.navy : AppColors.muted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }).toList(),
       ),
     );
   }

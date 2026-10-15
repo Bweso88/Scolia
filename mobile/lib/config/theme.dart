@@ -28,18 +28,18 @@ class _FadeThroughTransitionsBuilder extends PageTransitionsBuilder {
 }
 
 class AppColors {
-  static const navy   = Color(0xFF0D1B3E);
-  static const amber  = Color(0xFFF5A623);
+  static const navy   = Color(0xFF091B47);
+  static const amber  = Color(0xFFFFAC23);
   static const bg     = Color(0xFFF2F4F9);
   static const white  = Color(0xFFFFFFFF);
   static const border = Color(0xFFDDE2EF);
   static const body   = Color(0xFF4B5670);
   static const muted  = Color(0xFF8E99B4);
-  static const green  = Color(0xFF059669);
+  static const green  = Color(0xFF00A572);
   static const red    = Color(0xFFDC2626);
-  static const blue   = Color(0xFF2563EB);
-  static const purple = Color(0xFF7C3AED);
-  static const orange = Color(0xFFF97316);
+  static const blue   = Color(0xFF1D63FD);
+  static const purple = Color(0xFF7E34FD);
+  static const orange = Color(0xFFFF781A);
   static const light  = Color(0xFFEFF2FA);
 }
 
@@ -77,8 +77,8 @@ ThemeData buildTheme({Color? primary, Color? secondary}) {
     cardTheme: CardThemeData(
       color: AppColors.white,
       surfaceTintColor: AppColors.white,
-      elevation: 4,
-      shadowColor: AppColors.navy.withOpacity(0.10),
+      elevation: 6,
+      shadowColor: AppColors.navy.withOpacity(0.16),
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
