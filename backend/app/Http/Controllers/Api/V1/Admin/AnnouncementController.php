@@ -11,6 +11,7 @@ use App\Notifications\NewAnnouncementNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 class AnnouncementController extends Controller
 {
@@ -22,6 +23,7 @@ class AnnouncementController extends Controller
 
         $announcements = Announcement::query()
             ->with('author')
+            ->notArchivedBy($user->id)
             ->when(
                 $user->cannot('announcement.publish'),
                 fn ($query) => $query->whereHas('targets', function ($q) use ($user) {
@@ -46,12 +48,17 @@ class AnnouncementController extends Controller
     public function store(StoreAnnouncementRequest $request)
     {
         $announcement = DB::transaction(function () use ($request) {
+            $photoPath = $request->hasFile('photo')
+                ? $request->file('photo')->store("tenants/{$request->user()->tenant_id}/announcements", 'public')
+                : null;
+
             $announcement = Announcement::create([
                 'author_user_id' => $request->user()->id,
                 'title' => $request->validated('title'),
                 'body' => $request->validated('body'),
                 'category' => $request->validated('category'),
                 'published_at' => now(),
+                'photo_path' => $photoPath,
             ]);
 
             $announcement->targets()->createMany($request->validated('targets'));
@@ -69,6 +76,41 @@ class AnnouncementController extends Controller
         $this->authorize('view', $announcement);
 
         return new AnnouncementResource($announcement->load('author', 'targets'));
+    }
+
+    /**
+     * Masquer l'annonce de ma propre liste — réversible, sans effet pour
+     * les autres destinataires.
+     */
+    public function archive(Announcement $announcement)
+    {
+        $this->authorize('archive', $announcement);
+
+        $announcement->archiverPour(request()->user()->id);
+
+        return response()->json(null, 204);
+    }
+
+    public function unarchive(Announcement $announcement)
+    {
+        $this->authorize('archive', $announcement);
+
+        $announcement->desarchiverPour(request()->user()->id);
+
+        return response()->json(null, 204);
+    }
+
+    public function destroy(Announcement $announcement)
+    {
+        $this->authorize('delete', $announcement);
+
+        if ($announcement->photo_path) {
+            Storage::disk('public')->delete($announcement->photo_path);
+        }
+
+        $announcement->delete();
+
+        return response()->json(null, 204);
     }
 
     private function resolveRecipients(Announcement $announcement): Collection

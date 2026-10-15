@@ -43,4 +43,19 @@ class MessagingService {
     final direction = (data['direction'] as List).map((e) => MessagingContact.fromJson(e as Map<String, dynamic>)).toList();
     return (profs: profs, direction: direction);
   }
+
+  /// Masque la conversation de ma propre liste — réversible, sans effet
+  /// pour les autres participants.
+  Future<void> archiverConversation(int id) async {
+    await apiService.post('/admin/conversations/$id/archive');
+  }
+
+  Future<void> desarchiverConversation(int id) async {
+    await apiService.delete('/admin/conversations/$id/archive');
+  }
+
+  /// Supprime le fil entier — pour tous ses participants.
+  Future<void> supprimerConversation(int id) async {
+    await apiService.delete('/admin/conversations/$id');
+  }
 }

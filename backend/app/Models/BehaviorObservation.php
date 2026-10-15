@@ -2,18 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Archivable;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\BehaviorObservationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['student_id', 'author_user_id', 'category', 'title', 'description', 'occurred_at', 'visible_to_parent'])]
 class BehaviorObservation extends Model
 {
     /** @use HasFactory<BehaviorObservationFactory> */
-    use BelongsToTenant, HasFactory;
+    use Archivable, BelongsToTenant, HasFactory, SoftDeletes;
 
     protected function casts(): array
     {

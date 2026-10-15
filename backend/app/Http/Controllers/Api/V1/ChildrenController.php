@@ -118,6 +118,7 @@ class ChildrenController extends Controller
 
         $observations = BehaviorObservation::where('student_id', $student->id)
             ->where('visible_to_parent', true)
+            ->notArchivedBy($request->user()->id)
             ->with('author')
             ->orderByDesc('occurred_at')
             ->paginate();
@@ -176,10 +177,106 @@ class ChildrenController extends Controller
             Announcement::whereHas('targets', function ($q) use ($student) {
                 $q->where('target_type', 'all')
                     ->orWhere(fn ($qq) => $qq->where('target_type', 'school_class')->where('target_id', $student->school_class_id));
-            })->orderByDesc('published_at')->paginate()
+            })
+                ->notArchivedBy($request->user()->id)
+                ->orderByDesc('published_at')->paginate()
         );
 
         return $announcements;
+    }
+
+    /**
+     * Fil d'actualité de l'espace parent (docs/PRODUCT_ARCHITECTURE.md) :
+     * récapitulatif, dans l'ordre chronologique inverse, des annonces de
+     * l'école et des éléments récents concernant cet enfant (comportement,
+     * devoirs, absences) — un recap des mêmes informations que les menus,
+     * réunies en un seul flux.
+     */
+    public function feed(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $limite = 30;
+
+        $annonces = Announcement::whereHas('targets', function ($q) use ($student) {
+            $q->where('target_type', 'all')
+                ->orWhere(fn ($qq) => $qq->where('target_type', 'school_class')->where('target_id', $student->school_class_id));
+        })
+            ->notArchivedBy($request->user()->id)
+            ->with('author')
+            ->latest('published_at')
+            ->limit($limite)
+            ->get()
+            ->map(fn (Announcement $a) => [
+                'type' => 'annonce',
+                'id' => $a->id,
+                'titre' => $a->title,
+                'corps' => $a->body,
+                'photo_url' => $a->photoUrl(),
+                'horodatage' => $a->published_at?->toIso8601String(),
+                'auteur' => $a->author?->name,
+            ]);
+
+        $comportements = BehaviorObservation::where('student_id', $student->id)
+            ->where('visible_to_parent', true)
+            ->notArchivedBy($request->user()->id)
+            ->with('author')
+            ->latest('occurred_at')
+            ->limit($limite)
+            ->get()
+            ->map(fn (BehaviorObservation $b) => [
+                'type' => 'comportement',
+                'id' => $b->id,
+                'titre' => $b->title,
+                'corps' => $b->description,
+                'categorie' => $b->category,
+                'horodatage' => $b->occurred_at?->toIso8601String(),
+                'auteur' => $b->author?->name,
+            ]);
+
+        $devoirs = Homework::where('school_class_id', $student->school_class_id)
+            ->whereNotNull('published_at')
+            ->latest('due_date')
+            ->limit($limite)
+            ->get()
+            ->map(fn (Homework $h) => [
+                'type' => 'devoir',
+                'id' => $h->id,
+                'titre' => $h->title,
+                'corps' => $h->instructions,
+                'horodatage' => $h->due_date?->toIso8601String(),
+                'auteur' => null,
+            ]);
+
+        $absences = AttendanceRecord::where('student_id', $student->id)
+            ->latest('date')
+            ->limit($limite)
+            ->get()
+            ->map(fn (AttendanceRecord $a) => [
+                'type' => 'absence',
+                'id' => $a->id,
+                'titre' => match ($a->type) {
+                    'absence' => 'Absence',
+                    'retard' => 'Retard',
+                    default => ucfirst($a->type),
+                },
+                'corps' => $a->reason,
+                'horodatage' => $a->date?->toIso8601String(),
+                'auteur' => null,
+            ]);
+
+        $fil = collect()
+            ->merge($annonces)
+            ->merge($comportements)
+            ->merge($devoirs)
+            ->merge($absences)
+            ->filter(fn (array $item) => $item['horodatage'] !== null)
+            ->sortByDesc('horodatage')
+            ->values()
+            ->take($limite);
+
+        return response()->json(['items' => $fil]);
     }
 
     /**

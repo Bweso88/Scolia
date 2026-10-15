@@ -36,4 +36,26 @@ class AnnouncementPolicy
     {
         return $user->can('announcement.publish');
     }
+
+    /**
+     * Masquer l'annonce de sa propre liste (parent ou enseignant) : même
+     * règle que pour la consulter.
+     */
+    public function archive(User $user, Announcement $announcement): bool
+    {
+        return $this->view($user, $announcement);
+    }
+
+    /**
+     * Supprimer réellement l'annonce (pour tout le monde) : réservé à son
+     * auteur ou à qui peut publier (direction / administration).
+     */
+    public function delete(User $user, Announcement $announcement): bool
+    {
+        if ($user->tenant_id !== $announcement->tenant_id) {
+            return false;
+        }
+
+        return $announcement->author_user_id === $user->id || $user->can('announcement.publish');
+    }
 }

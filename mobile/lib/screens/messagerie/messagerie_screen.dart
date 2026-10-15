@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/conversation.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/messaging_service.dart';
+import '../../widgets/archivable_tile.dart';
 import '../../widgets/empty_state.dart';
 
 /// Liste des fils de discussion de l'utilisateur connecté — un parent y
@@ -27,6 +28,30 @@ class _MessagerieScreenState extends State<MessagerieScreen> {
   void initState() {
     super.initState();
     _charger();
+  }
+
+  Future<void> _archiver(Conversation c) async {
+    setState(() => _conversations.removeWhere((x) => x.id == c.id));
+    try {
+      await _service.archiverConversation(c.id);
+    } catch (_) {
+      if (mounted) setState(() => _conversations.add(c));
+    }
+  }
+
+  Future<void> _supprimer(Conversation c) async {
+    setState(() => _conversations.removeWhere((x) => x.id == c.id));
+    try {
+      await _service.supprimerConversation(c.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _conversations.add(c));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.red,
+        ));
+      }
+    }
   }
 
   Future<void> _charger() async {
@@ -66,39 +91,44 @@ class _MessagerieScreenState extends State<MessagerieScreen> {
                     itemBuilder: (_, i) {
                       final c = _conversations[i];
                       final moi = context.read<AuthProvider>().user!.id;
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppColors.navy.withOpacity(0.1),
-                          child: const Icon(Icons.person_outline, color: AppColors.navy),
-                        ),
-                        title: Text(c.interlocuteur(moi), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (c.contexteEleve != null)
+                      return ArchivableTile(
+                        cle: c.id,
+                        onArchiver: () => _archiver(c),
+                        onSupprimer: () => _supprimer(c),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: AppColors.navy.withOpacity(0.1),
+                            child: const Icon(Icons.person_outline, color: AppColors.navy),
+                          ),
+                          title: Text(c.interlocuteur(moi), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (c.contexteEleve != null)
+                                Text(
+                                  c.contexteEleve!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+                                ),
                               Text(
-                                c.contexteEleve!,
+                                c.lastMessage ?? c.subject ?? '',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+                                style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
                               ),
-                            Text(
-                              c.lastMessage ?? c.subject ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
-                            ),
-                          ],
+                            ],
+                          ),
+                          onTap: () async {
+                            await context.push('/messagerie/conversation', extra: {
+                              'id': c.id,
+                              'titre': c.interlocuteur(moi),
+                              'sousTitre': c.contexteEleve,
+                            });
+                            _charger();
+                          },
                         ),
-                        onTap: () async {
-                          await context.push('/messagerie/conversation', extra: {
-                            'id': c.id,
-                            'titre': c.interlocuteur(moi),
-                            'sousTitre': c.contexteEleve,
-                          });
-                          _charger();
-                        },
                       );
                     },
                   ),

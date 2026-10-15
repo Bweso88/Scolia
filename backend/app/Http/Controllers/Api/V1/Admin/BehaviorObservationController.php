@@ -18,6 +18,7 @@ class BehaviorObservationController extends Controller
 
         $observations = BehaviorObservation::query()
             ->with('author')
+            ->notArchivedBy($request->user()->id)
             ->when($request->integer('student_id'), fn ($query, $studentId) => $query->where('student_id', $studentId))
             ->when(
                 $request->user()->cannot('student.manage') && ! $request->user()->hasRole(['teacher', 'surveillant']),
@@ -59,6 +60,28 @@ class BehaviorObservationController extends Controller
         $this->authorize('delete', $behaviorObservation);
 
         $behaviorObservation->delete();
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Masquer l'observation de ma propre liste — réversible, sans effet
+     * pour les autres (le parent comme l'enseignant peuvent le faire).
+     */
+    public function archive(BehaviorObservation $behaviorObservation)
+    {
+        $this->authorize('archive', $behaviorObservation);
+
+        $behaviorObservation->archiverPour(request()->user()->id);
+
+        return response()->json(null, 204);
+    }
+
+    public function unarchive(BehaviorObservation $behaviorObservation)
+    {
+        $this->authorize('archive', $behaviorObservation);
+
+        $behaviorObservation->desarchiverPour(request()->user()->id);
 
         return response()->json(null, 204);
     }

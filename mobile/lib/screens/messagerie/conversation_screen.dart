@@ -310,47 +310,52 @@ class _BulleClipper extends CustomClipper<Path> {
   static const _rayon = 16.0;
   static const _petitRayon = 4.0;
   static const _queueLargeur = 7.0;
+  // Chevauchement entre le corps et la queue : sans lui, ce sont deux
+  // contours simplement accolés et l'ombre de PhysicalShape dessine un
+  // liseré visible à leur jonction (la bulle paraît "en deux morceaux").
+  // Path.combine en fait une seule silhouette, donc une seule ombre.
+  static const _chevauchement = 3.0;
 
   @override
   Path getClip(Size size) {
     final l = size.width;
     final h = size.height;
-    final path = Path();
+
+    late final Path corps;
+    late final Path queue;
 
     if (queueADroite) {
-      path.addRRect(RRect.fromRectAndCorners(
-        Rect.fromLTWH(0, 0, l - _queueLargeur, h),
-        topLeft: const Radius.circular(_rayon),
-        topRight: const Radius.circular(_rayon),
-        bottomLeft: const Radius.circular(_rayon),
-        bottomRight: const Radius.circular(_petitRayon),
-      ));
-      path.addPath(
-        Path()
-          ..moveTo(l - _queueLargeur, h - _rayon * 0.9)
-          ..quadraticBezierTo(l - _queueLargeur, h - 1, l, h)
-          ..lineTo(l - _queueLargeur - 2, h - 1)
-          ..close(),
-        Offset.zero,
-      );
+      corps = Path()
+        ..addRRect(RRect.fromRectAndCorners(
+          Rect.fromLTWH(0, 0, l - _queueLargeur, h),
+          topLeft: const Radius.circular(_rayon),
+          topRight: const Radius.circular(_rayon),
+          bottomLeft: const Radius.circular(_rayon),
+          bottomRight: const Radius.circular(_petitRayon),
+        ));
+      final xBase = l - (_queueLargeur + _chevauchement);
+      queue = Path()
+        ..moveTo(xBase, h - _rayon * 0.9)
+        ..quadraticBezierTo(xBase, h - 1, l, h)
+        ..lineTo(xBase, h - 1)
+        ..close();
     } else {
-      path.addRRect(RRect.fromRectAndCorners(
-        Rect.fromLTWH(_queueLargeur, 0, l - _queueLargeur, h),
-        topLeft: const Radius.circular(_rayon),
-        topRight: const Radius.circular(_rayon),
-        bottomLeft: const Radius.circular(_petitRayon),
-        bottomRight: const Radius.circular(_rayon),
-      ));
-      path.addPath(
-        Path()
-          ..moveTo(_queueLargeur, h - _rayon * 0.9)
-          ..quadraticBezierTo(_queueLargeur, h - 1, 0, h)
-          ..lineTo(_queueLargeur + 2, h - 1)
-          ..close(),
-        Offset.zero,
-      );
+      corps = Path()
+        ..addRRect(RRect.fromRectAndCorners(
+          Rect.fromLTWH(_queueLargeur, 0, l - _queueLargeur, h),
+          topLeft: const Radius.circular(_rayon),
+          topRight: const Radius.circular(_rayon),
+          bottomLeft: const Radius.circular(_petitRayon),
+          bottomRight: const Radius.circular(_rayon),
+        ));
+      const xBase = _queueLargeur + _chevauchement;
+      queue = Path()
+        ..moveTo(xBase, h - _rayon * 0.9)
+        ..quadraticBezierTo(xBase, h - 1, 0, h)
+        ..lineTo(xBase, h - 1)
+        ..close();
     }
-    return path;
+    return Path.combine(PathOperation.union, corps, queue);
   }
 
   @override

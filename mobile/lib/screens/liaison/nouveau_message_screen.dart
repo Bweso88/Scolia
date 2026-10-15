@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -24,6 +26,7 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
   String _categorie = 'info';
   int? _classeCiblee; // null = toute l'école
   bool _envoi = false;
+  File? _photo;
 
   static const _categories = {
     'info':     'Information',
@@ -41,6 +44,11 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
     super.dispose();
   }
 
+  Future<void> _choisirPhoto() async {
+    final fichier = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
+    if (fichier != null) setState(() => _photo = File(fichier.path));
+  }
+
   Future<void> _envoyer() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _envoi = true);
@@ -52,6 +60,7 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
         targets: _classeCiblee == null
             ? [{'target_type': 'all'}]
             : [{'target_type': 'school_class', 'target_id': _classeCiblee}],
+        photo: _photo,
       );
       if (mounted) {
         showSuccessToast(context, 'Annonce publiée.');
@@ -109,6 +118,41 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
                 decoration: const InputDecoration(labelText: 'Contenu *'),
                 maxLines: 5,
                 validator: (v) => v == null || v.trim().isEmpty ? 'Le contenu est requis' : null,
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _choisirPhoto,
+                child: _photo != null
+                    ? Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(_photo!, width: double.infinity, height: 160, fit: BoxFit.cover),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.cancel, color: AppColors.white),
+                            onPressed: () => setState(() => _photo = null),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        width: double.infinity,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: AppColors.light,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_outlined, color: AppColors.muted),
+                            SizedBox(height: 4),
+                            Text('Ajouter une photo (optionnel)', style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                          ],
+                        ),
+                      ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

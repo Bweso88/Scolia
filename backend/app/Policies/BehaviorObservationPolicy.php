@@ -33,6 +33,15 @@ class BehaviorObservationPolicy
     }
 
     /**
+     * Masquer l'observation de sa propre liste (parent ou enseignant) :
+     * même règle que pour la consulter.
+     */
+    public function archive(User $user, BehaviorObservation $observation): bool
+    {
+        return $this->view($user, $observation);
+    }
+
+    /**
      * Seuls l'auteur de l'observation ou l'administration peuvent la
      * supprimer (correction d'une erreur de saisie).
      */

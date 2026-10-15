@@ -12,4 +12,20 @@ class RemarquesService {
   Future<void> creerRemarque(Map<String, dynamic> corps) async {
     await apiService.post('/admin/behavior-observations', body: corps);
   }
+
+  /// Masque l'observation de ma propre liste — réversible, sans effet pour
+  /// les autres (parent comme enseignant peuvent le faire).
+  Future<void> archiverRemarque(int id) async {
+    await apiService.post('/admin/behavior-observations/$id/archive');
+  }
+
+  Future<void> desarchiverRemarque(int id) async {
+    await apiService.delete('/admin/behavior-observations/$id/archive');
+  }
+
+  /// Suppression réelle — réservée à son auteur ou à l'administration
+  /// (l'API renvoie 403 sinon).
+  Future<void> supprimerRemarque(int id) async {
+    await apiService.delete('/admin/behavior-observations/$id');
+  }
 }

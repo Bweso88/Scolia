@@ -11,6 +11,7 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
 import '../../widgets/announcement_card.dart';
 import '../../widgets/animated_entry.dart';
+import '../../widgets/archivable_tile.dart';
 import '../../widgets/empty_state.dart';
 
 /// Annonces de l'école (docs/PRODUCT_ARCHITECTURE.md §8) : le cahier de
@@ -35,6 +36,30 @@ class _LiaisonScreenState extends State<LiaisonScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _charger());
+  }
+
+  Future<void> _archiver(Announcement a) async {
+    setState(() => _annonces.removeWhere((x) => x.id == a.id));
+    try {
+      await _announcementService.archiverAnnonce(a.id);
+    } catch (_) {
+      if (mounted) setState(() => _annonces.add(a));
+    }
+  }
+
+  Future<void> _supprimer(Announcement a) async {
+    setState(() => _annonces.removeWhere((x) => x.id == a.id));
+    try {
+      await _announcementService.supprimerAnnonce(a.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _annonces.add(a));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.red,
+        ));
+      }
+    }
   }
 
   Future<void> _charger() async {
@@ -106,7 +131,18 @@ class _LiaisonScreenState extends State<LiaisonScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           itemCount: _annonces.length,
-                          itemBuilder: (_, i) => AnimatedEntry(index: i, child: AnnouncementCard(announcement: _annonces[i])),
+                          itemBuilder: (_, i) {
+                            final a = _annonces[i];
+                            return AnimatedEntry(
+                              index: i,
+                              child: ArchivableTile(
+                                cle: a.id,
+                                onArchiver: () => _archiver(a),
+                                onSupprimer: () => _supprimer(a),
+                                child: AnnouncementCard(announcement: a),
+                              ),
+                            );
+                          },
                         ),
             ),
           ),

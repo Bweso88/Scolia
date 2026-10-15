@@ -10,6 +10,7 @@ import '../../services/remarques_service.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
 import '../../widgets/animated_entry.dart';
+import '../../widgets/archivable_tile.dart';
 import '../../widgets/remarque_card.dart';
 import '../../widgets/empty_state.dart';
 
@@ -34,6 +35,30 @@ class _RemarquesScreenState extends State<RemarquesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _charger());
+  }
+
+  Future<void> _archiver(Remarque r) async {
+    setState(() => _remarques.removeWhere((x) => x.id == r.id));
+    try {
+      await _remarquesService.archiverRemarque(r.id);
+    } catch (_) {
+      if (mounted) setState(() => _remarques.add(r));
+    }
+  }
+
+  Future<void> _supprimer(Remarque r) async {
+    setState(() => _remarques.removeWhere((x) => x.id == r.id));
+    try {
+      await _remarquesService.supprimerRemarque(r.id);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _remarques.add(r));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.red,
+        ));
+      }
+    }
   }
 
   Future<void> _charger() async {
@@ -105,7 +130,18 @@ class _RemarquesScreenState extends State<RemarquesScreen> {
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           itemCount: _remarques.length,
-                          itemBuilder: (_, i) => AnimatedEntry(index: i, child: RemarqueCard(remarque: _remarques[i])),
+                          itemBuilder: (_, i) {
+                            final r = _remarques[i];
+                            return AnimatedEntry(
+                              index: i,
+                              child: ArchivableTile(
+                                cle: r.id,
+                                onArchiver: () => _archiver(r),
+                                onSupprimer: () => _supprimer(r),
+                                child: RemarqueCard(remarque: r),
+                              ),
+                            );
+                          },
                         ),
             ),
           ),

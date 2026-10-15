@@ -1,5 +1,6 @@
 import '../models/announcement.dart';
 import '../models/attendance_record.dart';
+import '../models/fil_item.dart';
 import '../models/homework.dart';
 import '../models/note.dart';
 import '../models/remarque.dart';
@@ -54,5 +55,12 @@ class ChildrenService {
   Future<List<Announcement>> getAnnonces(int studentId) async {
     final data = await apiService.get('/children/$studentId/announcements');
     return (data['data'] as List).map((e) => Announcement.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Fil d'actualité : récap chronologique des annonces, du comportement,
+  /// des devoirs et des absences concernant cet enfant.
+  Future<List<FilItem>> getFil(int studentId) async {
+    final data = await apiService.get('/children/$studentId/feed');
+    return (data['items'] as List).map((e) => FilItem.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

@@ -262,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _titreSection('Accès rapide'),
       const SizedBox(height: 12),
       _grilleAcces(context, [
+        (Icons.dynamic_feed_outlined, 'Fil d\'actualité', AppColors.purple, () => context.push('/fil-actualite')),
         (Icons.assignment_outlined, 'Devoirs', AppColors.purple, () => context.go('/devoirs')),
         (Icons.comment_outlined, 'Comportement', AppColors.blue, () => context.go('/remarques')),
         (Icons.event_busy_outlined, 'Absences', AppColors.orange, () => context.push('/absences')),

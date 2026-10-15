@@ -17,6 +17,7 @@ class ConversationController extends Controller
 
         $conversations = Conversation::query()
             ->whereHas('participants', fn ($q) => $q->whereKey(request()->user()->id))
+            ->notArchivedBy(request()->user()->id)
             ->with(['participants', 'messages', 'student.schoolClass'])
             ->latest('updated_at')
             ->paginate();
@@ -59,6 +60,40 @@ class ConversationController extends Controller
         $this->authorize('view', $conversation);
 
         return new ConversationResource($conversation->load(['participants', 'messages.sender', 'student.schoolClass']));
+    }
+
+    /**
+     * Masquer la conversation de ma propre liste — réversible, sans effet
+     * pour les autres participants.
+     */
+    public function archive(Conversation $conversation)
+    {
+        $this->authorize('archive', $conversation);
+
+        $conversation->archiverPour(request()->user()->id);
+
+        return response()->json(null, 204);
+    }
+
+    public function unarchive(Conversation $conversation)
+    {
+        $this->authorize('archive', $conversation);
+
+        $conversation->desarchiverPour(request()->user()->id);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * Supprime le fil entier — pour tous ses participants.
+     */
+    public function destroy(Conversation $conversation)
+    {
+        $this->authorize('delete', $conversation);
+
+        $conversation->delete();
+
+        return response()->json(null, 204);
     }
 
     private function roleInThread(User $user): string

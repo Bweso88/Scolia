@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Archivable;
 use App\Models\Concerns\BelongsToTenant;
 use Database\Factories\ConversationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -10,12 +11,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable(['type', 'subject', 'created_by_user_id', 'school_class_id', 'student_id'])]
 class Conversation extends Model
 {
     /** @use HasFactory<ConversationFactory> */
-    use BelongsToTenant, HasFactory;
+    use Archivable, BelongsToTenant, HasFactory, SoftDeletes;
 
     public function createdBy(): BelongsTo
     {

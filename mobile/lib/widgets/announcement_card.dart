@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -115,6 +116,20 @@ class AnnouncementCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(announcement.body, style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.body), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  if (announcement.photoUrl != null) ...[
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl: announcement.photoUrl!,
+                        width: double.infinity,
+                        height: 140,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(height: 140, color: AppColors.light),
+                        errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Row(
                     children: [

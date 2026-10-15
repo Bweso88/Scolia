@@ -5,6 +5,7 @@ class Announcement {
   final String title;
   final String body;
   final String category;
+  final String? photoUrl;
   final String? publishedAt;
   final String? authorName;
 
@@ -13,6 +14,7 @@ class Announcement {
     required this.title,
     required this.body,
     required this.category,
+    this.photoUrl,
     this.publishedAt,
     this.authorName,
   });
@@ -22,6 +24,7 @@ class Announcement {
         title:       j['title'] as String,
         body:        j['body'] as String,
         category:    j['category'] as String? ?? 'info',
+        photoUrl:    j['photo_url'] as String?,
         publishedAt: j['published_at'] as String?,
         authorName:  j['author_name'] as String?,
       );

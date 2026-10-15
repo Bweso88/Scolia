@@ -47,6 +47,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::apiResource('behavior-observations', BehaviorObservationController::class)
         ->only(['index', 'store', 'show', 'destroy']);
+    Route::post('behavior-observations/{behavior_observation}/archive', [BehaviorObservationController::class, 'archive'])
+        ->name('behavior-observations.archive');
+    Route::delete('behavior-observations/{behavior_observation}/archive', [BehaviorObservationController::class, 'unarchive'])
+        ->name('behavior-observations.unarchive');
 
     Route::apiResource('attendance-records', AttendanceRecordController::class)
         ->only(['index', 'store', 'show']);
@@ -56,13 +60,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('attendance-records.review-justification');
 
     Route::apiResource('conversations', ConversationController::class)
-        ->only(['index', 'store', 'show']);
+        ->only(['index', 'store', 'show', 'destroy']);
+    Route::post('conversations/{conversation}/archive', [ConversationController::class, 'archive'])
+        ->name('conversations.archive');
+    Route::delete('conversations/{conversation}/archive', [ConversationController::class, 'unarchive'])
+        ->name('conversations.unarchive');
     Route::apiResource('conversations.messages', MessageController::class)
         ->only(['index', 'store'])
         ->shallow();
 
     Route::apiResource('announcements', AnnouncementController::class)
-        ->only(['index', 'store', 'show']);
+        ->only(['index', 'store', 'show', 'destroy']);
+    Route::post('announcements/{announcement}/archive', [AnnouncementController::class, 'archive'])
+        ->name('announcements.archive');
+    Route::delete('announcements/{announcement}/archive', [AnnouncementController::class, 'unarchive'])
+        ->name('announcements.unarchive');
 
     Route::apiResource('timetable-slots', TimetableSlotController::class)
         ->except(['create', 'edit']);

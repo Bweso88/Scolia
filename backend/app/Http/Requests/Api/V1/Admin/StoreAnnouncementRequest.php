@@ -19,6 +19,7 @@ class StoreAnnouncementRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
             'category' => ['required', Rule::in(['info', 'reunion', 'sortie', 'examen', 'vacances', 'urgence'])],
+            'photo' => ['nullable', 'image', 'max:5120'],
             'targets' => ['required', 'array', 'min:1'],
             'targets.*.target_type' => ['required', Rule::in(['all', 'school_class', 'user'])],
             'targets.*.target_id' => ['required_unless:targets.*.target_type,all', 'nullable', 'integer'],

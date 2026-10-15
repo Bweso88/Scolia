@@ -10,6 +10,7 @@ import '../screens/devoirs/publier_devoir_screen.dart';
 import '../screens/absences/absences_screen.dart';
 import '../screens/absences/saisir_absence_screen.dart';
 import '../screens/home/home_screen.dart';
+import '../screens/fil_actualite/fil_actualite_screen.dart';
 import '../screens/liaison/liaison_screen.dart';
 import '../screens/liaison/nouveau_message_screen.dart';
 import '../screens/messagerie/messagerie_screen.dart';
@@ -56,6 +57,7 @@ GoRouter buildRouter(BuildContext context) {
       GoRoute(path: '/auth/connexion',    builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/auth/ecole',        builder: (_, __) => const SelectionEcoleScreen()),
       GoRoute(path: '/accueil',           builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/fil-actualite',     builder: (_, __) => const FilActualiteScreen()),
       GoRoute(path: '/devoirs',           builder: (_, __) => const DevoirsScreen()),
       GoRoute(path: '/devoirs/publier',   builder: (_, __) => const PublierDevoirScreen()),
       GoRoute(path: '/absences',          builder: (_, __) => const AbsencesScreen()),

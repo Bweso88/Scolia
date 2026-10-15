@@ -14,6 +14,7 @@ class AnnouncementResource extends JsonResource
             'title' => $this->title,
             'body' => $this->body,
             'category' => $this->category,
+            'photo_url' => $this->photoUrl(),
             'published_at' => $this->published_at?->toIso8601String(),
             'author_name' => $this->whenLoaded('author', fn () => $this->author->name),
         ];
