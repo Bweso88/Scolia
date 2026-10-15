@@ -1,43 +1,54 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/app_config.dart';
+import '../models/auth_context.dart';
 import '../models/user.dart';
 import 'api_service.dart';
 
-class AuthService {
-  static const _keyToken  = 'token';
-  static const _keyRole   = 'role';
-  static const _keyUserId = 'user_id';
+typedef SessionAuth = ({String token, User user, List<AuthContext> contexts});
 
-  Future<({String token, User user})> seConnecter(String telephone, String code) async {
-    final data = await apiService.post('/auth/connexion', body: {
-      'telephone':  telephone,
-      'code':       code.toUpperCase(),
-      'ecole_slug': AppConfig.ecoleSlug,
+class AuthService {
+  static const _keyToken = 'token';
+
+  Future<SessionAuth> seConnecter(String email, String motDePasse) async {
+    final data = await apiService.post('/auth/login', body: {
+      'email': email,
+      'password': motDePasse,
     });
+    return _lireReponse(data);
+  }
+
+  /// Bascule vers un autre compte du même parent (autre école) sans
+  /// ressaisir le mot de passe — nécessite le token de la session courante.
+  Future<SessionAuth> basculerContexte(int userId) async {
+    final data = await apiService.post('/auth/select-context', body: {'user_id': userId});
+    return _lireReponse(data);
+  }
+
+  SessionAuth _lireReponse(Map<String, dynamic> data) {
     final token = data['token'] as String;
-    final user  = User.fromJson(data['utilisateur'] as Map<String, dynamic>);
-    return (token: token, user: user);
+    final user = User.fromJson(data['user'] as Map<String, dynamic>);
+    final contexts = (data['contexts'] as List? ?? [])
+        .map((c) => AuthContext.fromJson(c as Map<String, dynamic>))
+        .toList();
+    return (token: token, user: user, contexts: contexts);
   }
 
   Future<void> deconnexion() async {
-    try { await apiService.post('/auth/deconnexion'); } catch (_) {}
+    try {
+      await apiService.post('/auth/logout');
+    } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyToken);
-    await prefs.remove(_keyRole);
-    await prefs.remove(_keyUserId);
     apiService.setToken(null);
   }
 
-  Future<User?> getProfil() async {
-    final data = await apiService.get('/auth/profil');
-    return User.fromJson(data['profil'] as Map<String, dynamic>);
+  Future<User> getProfil() async {
+    final data = await apiService.get('/me');
+    return User.fromJson(data['data'] as Map<String, dynamic>);
   }
 
-  Future<void> sauvegarderToken(String token, User user) async {
+  Future<void> sauvegarderToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyToken, token);
-    await prefs.setString(_keyRole, user.role);
-    await prefs.setInt(_keyUserId, user.id);
   }
 
   Future<String?> chargerToken() async {

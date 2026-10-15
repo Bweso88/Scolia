@@ -1,8 +1,12 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
+import '../../widgets/falling_emoji_overlay.dart';
+import '../../widgets/pill_badge.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,14 +15,15 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _formKey     = GlobalKey<FormState>();
-  final _telCtrl     = TextEditingController(text: '+242');
-  final _codeCtrl    = TextEditingController();
-  bool  _codeVisible = false;
+class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
+  final _formKey        = GlobalKey<FormState>();
+  final _emailCtrl      = TextEditingController();
+  final _motDePasseCtrl = TextEditingController();
+  bool  _motDePasseVisible = false;
   late  AnimationController _animCtrl;
   late  Animation<Offset>   _slideAnim;
   late  Animation<double>   _fadeAnim;
+  late  AnimationController _flotteCtrl;
 
   @override
   void initState() {
@@ -28,13 +33,17 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
     _fadeAnim  = CurvedAnimation(parent: _animCtrl, curve: Curves.easeIn);
     _animCtrl.forward();
+    // Petites icônes qui flottent doucement en fond — un clin d'œil à
+    // l'école (livre, crayon, règle...) pour humaniser l'écran de connexion.
+    _flotteCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
   }
 
   @override
   void dispose() {
     _animCtrl.dispose();
-    _telCtrl.dispose();
-    _codeCtrl.dispose();
+    _flotteCtrl.dispose();
+    _emailCtrl.dispose();
+    _motDePasseCtrl.dispose();
     super.dispose();
   }
 
@@ -42,7 +51,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     try {
-      await auth.seConnecter(_telCtrl.text.trim(), _codeCtrl.text.trim());
+      await auth.seConnecter(_emailCtrl.text.trim(), _motDePasseCtrl.text);
+      if (!mounted) return;
+      // Un compte lié à plusieurs écoles doit choisir laquelle consulter
+      // avant d'entrer (docs/PRODUCT_ARCHITECTURE.md §9).
+      final destination = auth.aPlusieursEcoles ? '/auth/ecole' : '/accueil';
+      _jouerAnimationConnexion(destination);
     } on Exception catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -55,6 +69,21 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  /// Petite animation ludique jouée juste après la connexion, avant
+  /// d'entrer dans l'application (docs/PRODUCT_ARCHITECTURE.md — accueil).
+  void _jouerAnimationConnexion(String destination) {
+    late OverlayEntry entree;
+    entree = OverlayEntry(
+      builder: (_) => FallingEmojiOverlay(
+        onDone: () {
+          entree.remove();
+          if (mounted) context.go(destination);
+        },
+      ),
+    );
+    Overlay.of(context).insert(entree);
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -63,15 +92,18 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0D1B3E), Color(0xFF1A3060)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.light, AppColors.white],
           ),
         ),
-        child: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(child: _IconesFlottantes(animation: _flotteCtrl)),
+            SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -81,56 +113,81 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     child: Column(
                       children: [
                         Container(
-                          width: 80, height: 80,
+                          width: 84, height: 84,
                           decoration: BoxDecoration(
-                            color: AppColors.amber,
-                            borderRadius: BorderRadius.circular(22),
+                            color: AppColors.navy,
+                            borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.amber.withOpacity(0.45),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                                color: AppColors.navy.withOpacity(0.30),
+                                blurRadius: 28,
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.school_rounded, color: Colors.white, size: 40),
+                          child: const Icon(Icons.school_rounded, color: AppColors.white, size: 42),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                         Text(
                           'SCOLIA',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 30, fontWeight: FontWeight.w900,
-                            color: Colors.white, letterSpacing: 5,
+                            fontSize: 26, fontWeight: FontWeight.w900,
+                            color: AppColors.navy, letterSpacing: 4,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Plateforme scolaire',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13, color: Colors.white.withOpacity(0.55),
-                          ),
+                        const SizedBox(height: 10),
+                        const PillBadge(
+                          label: 'Espace École & Familles',
+                          couleur: AppColors.navy,
+                          icone: Icons.school_outlined,
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 28),
+
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Column(
+                      children: [
+                        Text(
+                          'Bienvenue sur votre espace',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.navy,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "L'école et les familles, réunies en toute confiance.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
 
                   // ── Card connexion ───────────────────────────────────
+                  // Un formulaire unique pour tous (parent, enseignant,
+                  // direction) : c'est le compte, côté serveur, qui porte
+                  // le rôle — pas un onglet choisi ici.
                   SlideTransition(
                     position: _slideAnim,
                     child: FadeTransition(
                       opacity: _fadeAnim,
                       child: Container(
-                        padding: const EdgeInsets.fromLTRB(28, 28, 28, 32),
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 26),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(28),
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(26),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: 40,
-                              offset: const Offset(0, 16),
+                              color: AppColors.navy.withOpacity(0.10),
+                              blurRadius: 32,
+                              offset: const Offset(0, 14),
                             ),
                           ],
                         ),
@@ -140,112 +197,98 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Connexion',
+                                'IDENTIFIANT',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.navy,
+                                  fontSize: 11, fontWeight: FontWeight.w700,
+                                  color: AppColors.muted, letterSpacing: 0.6,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Identifiants fournis par votre école',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13, color: AppColors.muted,
-                                ),
-                              ),
-                              const SizedBox(height: 26),
+                              const SizedBox(height: 8),
 
-                              // ── Téléphone ──────────────────────────
-                              _ChampSaisie(
-                                controller:  _telCtrl,
-                                label:       'Numéro de téléphone',
-                                icone:       Icons.phone_outlined,
-                                clavier:     TextInputType.phone,
-                                validateur:  (v) {
-                                  if (v == null || v.trim().length < 8) return 'Numéro invalide';
+                              // ── Email ──────────────────────────────
+                              TextFormField(
+                                controller: _emailCtrl,
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.username],
+                                style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
+                                decoration: const InputDecoration(
+                                  hintText: 'vous@exemple.fr',
+                                  prefixIcon: Icon(Icons.mail_outline),
+                                ),
+                                validator: (v) {
+                                  if (v == null || !v.contains('@')) return 'E-mail invalide';
                                   return null;
                                 },
                               ),
                               const SizedBox(height: 16),
 
-                              // ── Code ───────────────────────────────
-                              TextFormField(
-                                controller:    _codeCtrl,
-                                obscureText:   !_codeVisible,
-                                textCapitalization: TextCapitalization.characters,
+                              Text(
+                                'MOT DE PASSE',
                                 style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 18, fontWeight: FontWeight.w700,
-                                  color: AppColors.navy, letterSpacing: 3,
+                                  fontSize: 11, fontWeight: FontWeight.w700,
+                                  color: AppColors.muted, letterSpacing: 0.6,
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // ── Mot de passe ───────────────────────
+                              TextFormField(
+                                controller: _motDePasseCtrl,
+                                obscureText: !_motDePasseVisible,
+                                autofillHints: const [AutofillHints.password],
+                                style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
                                 decoration: InputDecoration(
-                                  labelText: 'Code d\'accès',
+                                  hintText: '••••••••••••',
                                   prefixIcon: const Icon(Icons.lock_outline),
                                   suffixIcon: IconButton(
                                     icon: Icon(
-                                      _codeVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                      _motDePasseVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                       color: AppColors.muted,
                                     ),
-                                    onPressed: () => setState(() => _codeVisible = !_codeVisible),
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppColors.border),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppColors.border),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(color: AppColors.navy, width: 2),
+                                    onPressed: () => setState(() => _motDePasseVisible = !_motDePasseVisible),
                                   ),
                                 ),
+                                onFieldSubmitted: (_) => _seConnecter(),
                                 validator: (v) {
-                                  if (v == null || v.trim().length < 4) return 'Code requis';
+                                  if (v == null || v.isEmpty) return 'Mot de passe requis';
                                   return null;
                                 },
                               ),
 
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  const Icon(Icons.info_outline, size: 13, color: AppColors.muted),
-                                  const SizedBox(width: 5),
-                                  Expanded(
-                                    child: Text(
-                                      'Parents : code dossier reçu de l\'école.\nEnseignants : code communiqué par l\'administration.',
-                                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 28),
+                              const SizedBox(height: 24),
 
                               // ── Bouton ─────────────────────────────
                               SizedBox(
                                 width: double.infinity,
-                                height: 52,
+                                height: 54,
                                 child: ElevatedButton(
                                   onPressed: auth.charge ? null : _seConnecter,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.navy,
-                                    foregroundColor: Colors.white,
-                                    elevation: 4,
+                                    foregroundColor: AppColors.white,
+                                    elevation: 6,
                                     shadowColor: AppColors.navy.withOpacity(0.4),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
                                   child: auth.charge
                                       ? const SizedBox(
                                           height: 22, width: 22,
-                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                                          child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2.5),
                                         )
-                                      : Text(
-                                          'Se connecter',
-                                          style: GoogleFonts.plusJakartaSans(
-                                            fontSize: 16, fontWeight: FontWeight.w700,
-                                          ),
+                                      : Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              'Se connecter',
+                                              style: GoogleFonts.plusJakartaSans(
+                                                fontSize: 16, fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Icon(Icons.arrow_forward_rounded, size: 20),
+                                          ],
                                         ),
                                 ),
                               ),
@@ -256,59 +299,84 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 22),
+
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.shield_outlined, size: 14, color: AppColors.muted),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Connexion sécurisée',
+                          style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     'Version 1.0 · Scolia',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: Colors.white.withOpacity(0.3)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted.withOpacity(0.6)),
                   ),
                 ],
               ),
             ),
           ),
         ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ChampSaisie extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final IconData icone;
-  final TextInputType clavier;
-  final String? Function(String?)? validateur;
+/// Quelques icônes (livre, crayon, règle, étoile, trophée) qui flottent
+/// doucement en arrière-plan de l'écran de connexion — une touche "ambiance
+/// école", discrète (opacité très faible) pour ne pas gêner la lecture.
+class _IconesFlottantes extends StatelessWidget {
+  final Animation<double> animation;
 
-  const _ChampSaisie({
-    required this.controller,
-    required this.label,
-    required this.icone,
-    required this.clavier,
-    this.validateur,
-  });
+  const _IconesFlottantes({required this.animation});
+
+  static const _icones = <(IconData, double, double, double, Color)>[
+    (Icons.auto_stories_rounded, 0.10, 0.10, 0.0, AppColors.navy),
+    (Icons.edit_rounded, 0.82, 0.08, 1.4, AppColors.amber),
+    (Icons.emoji_events_rounded, 0.08, 0.60, 2.6, AppColors.amber),
+    (Icons.star_rounded, 0.88, 0.46, 0.8, AppColors.navy),
+    (Icons.calculate_rounded, 0.76, 0.26, 3.6, AppColors.navy),
+    (Icons.backpack_rounded, 0.06, 0.34, 4.6, AppColors.amber),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller:  controller,
-      keyboardType: clavier,
-      style: GoogleFonts.plusJakartaSans(fontSize: 15, color: AppColors.navy),
-      decoration: InputDecoration(
-        labelText:   label,
-        prefixIcon:  Icon(icone),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.navy, width: 2),
-        ),
+    final taille = MediaQuery.of(context).size;
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          return Stack(
+            children: _icones.map((spec) {
+              final (icone, gauche, haut, phase, couleur) = spec;
+              final t = animation.value * 2 * math.pi + phase;
+              final dy = math.sin(t) * 12;
+              final dx = math.cos(t * 0.7) * 7;
+              return Positioned(
+                left: taille.width * gauche,
+                top: taille.height * haut,
+                child: Transform.translate(
+                  offset: Offset(dx, dy),
+                  child: Transform.rotate(
+                    angle: math.sin(t * 0.5) * 0.10,
+                    child: Icon(icone, size: 30, color: couleur.withOpacity(0.07)),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
-      validator: validateur,
     );
   }
 }

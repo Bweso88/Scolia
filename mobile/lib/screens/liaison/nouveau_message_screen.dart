@@ -1,9 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../providers/liaison_provider.dart';
 import '../../config/theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/announcement_service.dart';
+import '../../widgets/success_toast.dart';
 
+/// Publication d'une annonce par le personnel, ciblée sur toute l'école ou
+/// une classe précise (docs/PRODUCT_ARCHITECTURE.md §8).
 class NouveauMessageScreen extends StatefulWidget {
   const NouveauMessageScreen({super.key});
 
@@ -14,40 +20,58 @@ class NouveauMessageScreen extends StatefulWidget {
 class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
   final _formKey   = GlobalKey<FormState>();
   final _titreCtrl = TextEditingController();
-  final _contenuCtrl = TextEditingController();
-  String _categorie   = 'info';
-  bool _necessite_ack = false;
-  bool _envoi = false;
+  final _corpsCtrl = TextEditingController();
+  final _announcementService = AnnouncementService();
 
-  static const _categories = ['info', 'devoir', 'autorisation', 'retard', 'autre'];
+  String _categorie = 'info';
+  int? _classeCiblee; // null = toute l'école
+  bool _envoi = false;
+  File? _photo;
+
+  static const _categories = {
+    'info':     'Information',
+    'reunion':  'Réunion',
+    'sortie':   'Sortie scolaire',
+    'examen':   'Examen',
+    'vacances': 'Vacances',
+    'urgence':  'Urgent',
+  };
 
   @override
   void dispose() {
     _titreCtrl.dispose();
-    _contenuCtrl.dispose();
+    _corpsCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _choisirPhoto() async {
+    final fichier = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 85);
+    if (fichier != null) setState(() => _photo = File(fichier.path));
   }
 
   Future<void> _envoyer() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _envoi = true);
     try {
-      await context.read<LiaisonProvider>().creerMessage({
-        'titre':        _titreCtrl.text.trim(),
-        'contenu':      _contenuCtrl.text.trim(),
-        'categorie':    _categorie,
-        'necessite_ack': _necessite_ack,
-      });
+      await _announcementService.publierAnnonce(
+        title: _titreCtrl.text.trim(),
+        body: _corpsCtrl.text.trim(),
+        category: _categorie,
+        targets: _classeCiblee == null
+            ? [{'target_type': 'all'}]
+            : [{'target_type': 'school_class', 'target_id': _classeCiblee}],
+        photo: _photo,
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message publié.'), backgroundColor: AppColors.green),
-        );
-        context.pop();
+        showSuccessToast(context, 'Annonce publiée.');
+        context.pop(true);
       }
     } on Exception catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: AppColors.red),
+        );
+      }
     } finally {
       if (mounted) setState(() => _envoi = false);
     }
@@ -55,8 +79,10 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final classes = context.read<AuthProvider>().user?.classes ?? [];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouveau message')),
+      appBar: AppBar(title: const Text('Nouvelle annonce')),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -66,34 +92,74 @@ class _NouveauMessageScreenState extends State<NouveauMessageScreen> {
               DropdownButtonFormField<String>(
                 value: _categorie,
                 decoration: const InputDecoration(labelText: 'Catégorie'),
-                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                items: _categories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _categorie = v!),
               ),
               const SizedBox(height: 12),
+              if (classes.isNotEmpty)
+                DropdownButtonFormField<int?>(
+                  value: _classeCiblee,
+                  decoration: const InputDecoration(labelText: 'Destinataires'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Toute l\'école')),
+                    ...classes.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))),
+                  ],
+                  onChanged: (v) => setState(() => _classeCiblee = v),
+                ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _titreCtrl,
-                decoration: const InputDecoration(labelText: 'Titre (optionnel)'),
+                decoration: const InputDecoration(labelText: 'Titre *'),
+                validator: (v) => v == null || v.trim().isEmpty ? 'Le titre est requis' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
-                controller: _contenuCtrl,
+                controller: _corpsCtrl,
                 decoration: const InputDecoration(labelText: 'Contenu *'),
                 maxLines: 5,
                 validator: (v) => v == null || v.trim().isEmpty ? 'Le contenu est requis' : null,
               ),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                title: const Text('Demander un accusé de réception'),
-                value: _necessite_ack,
-                onChanged: (v) => setState(() => _necessite_ack = v),
-                activeColor: AppColors.navy,
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _choisirPhoto,
+                child: _photo != null
+                    ? Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(_photo!, width: double.infinity, height: 160, fit: BoxFit.cover),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.cancel, color: AppColors.white),
+                            onPressed: () => setState(() => _photo = null),
+                          ),
+                        ],
+                      )
+                    : Container(
+                        width: double.infinity,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: AppColors.light,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_outlined, color: AppColors.muted),
+                            SizedBox(height: 4),
+                            Text('Ajouter une photo (optionnel)', style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                          ],
+                        ),
+                      ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _envoi ? null : _envoyer,
                 child: _envoi
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2))
-                    : const Text('Publier le message'),
+                    : const Text('Publier l\'annonce'),
               ),
             ],
           ),
