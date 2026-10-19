@@ -19,6 +19,7 @@ import '../screens/messagerie/nouvelle_conversation_screen.dart';
 import '../screens/messagerie/conversation_screen.dart';
 import '../screens/gestion/gestion_screen.dart';
 import '../screens/gestion/matieres_screen.dart';
+import '../screens/gestion/periodes_notation_screen.dart';
 import '../screens/gestion/classes_screen.dart';
 import '../screens/gestion/creer_classe_screen.dart';
 import '../screens/gestion/professeurs_screen.dart';
@@ -51,9 +52,17 @@ GoRouter buildRouter(BuildContext context) {
       final authentifie = auth.estConnecte;
       final versAuth    = state.matchedLocation.startsWith('/auth');
       if (!authentifie && !versAuth && state.matchedLocation != '/') return '/auth/connexion';
-      // '/auth/ecole' reste accessible authentifié : c'est l'étape de
-      // bascule entre écoles pour un parent multi-établissements.
-      if (authentifie && versAuth && state.matchedLocation != '/auth/ecole') return '/accueil';
+      // '/auth/connexion' et '/auth/ecole' restent volontairement exclus de
+      // ce bond automatique : AuthProvider.notifyListeners() se déclenche
+      // dès l'identification réussie (avant que l'écran de connexion n'ait
+      // fini de jouer son animation, et avant de savoir s'il faut passer par
+      // la sélection d'école pour un compte multi-établissements) —
+      // rediriger ici interromprait cette transition. LoginScreen et
+      // SelectionEcoleScreen gèrent eux-mêmes leur navigation vers l'accueil
+      // une fois prêts.
+      if (authentifie && versAuth && state.matchedLocation != '/auth/ecole' && state.matchedLocation != '/auth/connexion') {
+        return '/accueil';
+      }
       return null;
     },
     refreshListenable: auth,
@@ -88,6 +97,7 @@ GoRouter buildRouter(BuildContext context) {
       ),
       GoRoute(path: '/gestion',              builder: (_, __) => const GestionScreen()),
       GoRoute(path: '/gestion/matieres',      builder: (_, __) => const MatieresScreen()),
+      GoRoute(path: '/gestion/periodes-notation', builder: (_, __) => const PeriodesNotationScreen()),
       GoRoute(path: '/gestion/classes',       builder: (_, __) => const ClassesScreen()),
       GoRoute(
         path: '/gestion/classes/creer',

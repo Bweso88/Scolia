@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/homework.dart';
 import '../../models/note.dart';
 import '../../models/periode.dart';
 import '../../models/student.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/notes_service.dart';
 import '../../services/student_service.dart';
 import '../../widgets/success_toast.dart';
@@ -140,7 +142,7 @@ class _NoterDevoirScreenState extends State<NoterDevoirScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Noter le devoir'),
-            Text(widget.devoir.title, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.white.withOpacity(0.75))),
+            Text(widget.devoir.title, style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
           ],
         ),
       ),
@@ -150,10 +152,23 @@ class _NoterDevoirScreenState extends State<NoterDevoirScreen> {
               ? Padding(
                   padding: const EdgeInsets.all(24),
                   child: Center(
-                    child: Text(
-                      'Aucune période de notation n\'a encore été créée pour cette école. Contactez l\'administration.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.plusJakartaSans(color: AppColors.muted),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Aucune période de notation n\'a encore été créée pour cette école. Contactez l\'administration.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.plusJakartaSans(color: AppColors.muted),
+                        ),
+                        if (context.read<AuthProvider>().user?.estAdmin == true) ...[
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            onPressed: () => context.push('/gestion/periodes-notation'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Créer une période de notation'),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 )

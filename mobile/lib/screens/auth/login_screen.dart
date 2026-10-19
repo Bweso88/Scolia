@@ -366,23 +366,28 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          GestureDetector(
-                            onTap: () => setState(() => _seSouvenir = !_seSouvenir),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Checkbox(
-                                  value: _seSouvenir,
-                                  onChanged: (v) => setState(() => _seSouvenir = v ?? true),
-                                  activeColor: _Lumina.primary,
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                ),
-                                const SizedBox(width: 4),
-                                Text('Se souvenir de moi',
-                                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: _Lumina.onSurfaceVariant)),
-                              ],
+                          Flexible(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _seSouvenir = !_seSouvenir),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Checkbox(
+                                    value: _seSouvenir,
+                                    onChanged: (v) => setState(() => _seSouvenir = v ?? true),
+                                    activeColor: _Lumina.primary,
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text('Se souvenir de moi',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: _Lumina.onSurfaceVariant)),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           _boutonBiometrie(),

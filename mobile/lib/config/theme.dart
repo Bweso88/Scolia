@@ -64,14 +64,24 @@ ThemeData buildTheme({Color? primary, Color? secondary}) {
       bodyMedium: GoogleFonts.plusJakartaSans(color: AppColors.body),
       bodySmall:  GoogleFonts.plusJakartaSans(color: AppColors.muted),
     ),
+    // Même langage visuel que l'en-tête partagé (AppHeader) des écrans
+    // principaux : clair, texte/icônes en navy — plutôt que l'ancien bandeau
+    // plein navy, pour que tout écran utilisant encore l'AppBar standard
+    // (formulaires, listes secondaires) reste visuellement cohérent avec le
+    // reste de l'app sans devoir migrer chaque écran un par un.
     appBarTheme: AppBarTheme(
-      backgroundColor: couleurPrimaire,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.white,
+      foregroundColor: AppColors.navy,
       elevation: 0,
+      scrolledUnderElevation: 1,
+      shadowColor: AppColors.navy.withOpacity(0.1),
+      surfaceTintColor: AppColors.white,
+      iconTheme: const IconThemeData(color: AppColors.navy),
+      actionsIconTheme: const IconThemeData(color: AppColors.navy),
       titleTextStyle: GoogleFonts.plusJakartaSans(
-        color: AppColors.white,
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+        color: AppColors.navy,
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
       ),
     ),
     cardTheme: CardThemeData(

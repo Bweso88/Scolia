@@ -57,9 +57,9 @@ class _MaClasseScreenState extends State<MaClasseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(nomClasse,
-                style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.white)),
+                style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy)),
             Text('${_eleves.length} élève${_eleves.length > 1 ? 's' : ''}',
-                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.white.withOpacity(0.75))),
+                style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted)),
           ],
         ),
       ),

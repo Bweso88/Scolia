@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../models/conversation.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/messaging_service.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/archivable_tile.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/empty_state.dart';
@@ -70,23 +71,31 @@ class _MessagerieScreenState extends State<MessagerieScreen> {
     final estParent = context.read<AuthProvider>().user?.estParent == true;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Messagerie')),
-      body: RefreshIndicator(
-        onRefresh: _charger,
-        child: _charge
-            ? const Center(child: CircularProgressIndicator())
-            : _conversations.isEmpty
-                ? EmptyState(
-                    message: 'Aucune conversation',
-                    sousTitre: estParent
-                        ? 'Écrivez au professeur de votre enfant ou à la direction.'
-                        : 'Les messages des parents apparaîtront ici.',
-                    icone: Icons.forum_outlined,
-                    onAction: _charger,
-                    libelleAction: 'Actualiser',
-                  )
-                : ListView.separated(
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _charger,
+            child: _charge
+                ? ListView(padding: EdgeInsets.only(top: AppHeader.hauteur + 40), children: const [Center(child: CircularProgressIndicator())])
+                : _conversations.isEmpty
+                    ? ListView(
+                        padding: EdgeInsets.only(top: AppHeader.hauteur + 24),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          EmptyState(
+                            message: 'Aucune conversation',
+                            sousTitre: estParent
+                                ? 'Écrivez au professeur de votre enfant ou à la direction.'
+                                : 'Les messages des parents apparaîtront ici.',
+                            icone: Icons.forum_outlined,
+                            onAction: _charger,
+                            libelleAction: 'Actualiser',
+                          ),
+                        ],
+                      )
+                    : ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.only(top: AppHeader.hauteur + 8),
                     itemCount: _conversations.length,
                     separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
                     itemBuilder: (_, i) {
@@ -133,6 +142,9 @@ class _MessagerieScreenState extends State<MessagerieScreen> {
                       );
                     },
                   ),
+          ),
+          const Positioned(top: 0, left: 0, right: 0, child: AppHeader()),
+        ],
       ),
       floatingActionButton: estParent
           ? FloatingActionButton.extended(

@@ -9,6 +9,7 @@ import '../../config/theme.dart';
 import '../../models/remarque.dart';
 import '../../services/children_service.dart';
 import '../../services/remarques_service.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
 import '../../widgets/animated_entry.dart';
@@ -126,68 +127,70 @@ class _RemarquesScreenState extends State<RemarquesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.light,
-      appBar: AppBar(
-        title: const Text('Suivi'),
-        actions: [
-          if (peutEcrire)
-            IconButton(
-              icon: const Icon(Icons.add, color: AppColors.white),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              SizedBox(height: AppHeader.hauteur + (estParent ? 12 : 8)),
+              if (estParent) ...[
+                const ChildSelector(),
+                const SizedBox(height: 8),
+              ],
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _charger,
+                  child: _charge
+                      ? const Center(child: CircularProgressIndicator())
+                      : _remarques.isEmpty
+                          ? EmptyState(
+                              message: 'Aucune observation',
+                              sousTitre: 'Les observations de comportement apparaîtront ici.',
+                              icone: Icons.comment_outlined,
+                              onAction: _charger,
+                              libelleAction: 'Actualiser',
+                            )
+                          : ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                              children: [
+                                _semaineHumeur(),
+                                const SizedBox(height: 22),
+                                Text('Notes de l\'équipe pédagogique',
+                                    style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w800, color: _Su.onSurface)),
+                                const SizedBox(height: 12),
+                                ..._remarques.asMap().entries.map((entry) {
+                                  final r = entry.value;
+                                  return AnimatedEntry(
+                                    index: entry.key,
+                                    child: ArchivableTile(
+                                      cle: r.id,
+                                      onArchiver: () => _archiver(r),
+                                      onSupprimer: () => _supprimer(r),
+                                      child: _carteRemarque(r, estParent),
+                                    ),
+                                  );
+                                }),
+                                const SizedBox(height: 22),
+                                _statistiques(),
+                              ],
+                            ),
+                ),
+              ),
+            ],
+          ),
+          const Positioned(top: 0, left: 0, right: 0, child: AppHeader()),
+        ],
+      ),
+      floatingActionButton: peutEcrire
+          ? FloatingActionButton(
+              backgroundColor: _Su.primary,
               onPressed: () async {
                 final cree = await context.push<bool>('/remarques/nouvelle');
                 if (cree == true) _charger();
               },
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (estParent) ...[
-            const SizedBox(height: 12),
-            const ChildSelector(),
-            const SizedBox(height: 8),
-          ],
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _charger,
-              child: _charge
-                  ? const Center(child: CircularProgressIndicator())
-                  : _remarques.isEmpty
-                      ? EmptyState(
-                          message: 'Aucune observation',
-                          sousTitre: 'Les observations de comportement apparaîtront ici.',
-                          icone: Icons.comment_outlined,
-                          onAction: _charger,
-                          libelleAction: 'Actualiser',
-                        )
-                      : ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                          children: [
-                            _semaineHumeur(),
-                            const SizedBox(height: 22),
-                            Text('Notes de l\'équipe pédagogique',
-                                style: GoogleFonts.plusJakartaSans(fontSize: 17, fontWeight: FontWeight.w800, color: _Su.onSurface)),
-                            const SizedBox(height: 12),
-                            ..._remarques.asMap().entries.map((entry) {
-                              final r = entry.value;
-                              return AnimatedEntry(
-                                index: entry.key,
-                                child: ArchivableTile(
-                                  cle: r.id,
-                                  onArchiver: () => _archiver(r),
-                                  onSupprimer: () => _supprimer(r),
-                                  child: _carteRemarque(r, estParent),
-                                ),
-                              );
-                            }),
-                            const SizedBox(height: 22),
-                            _statistiques(),
-                          ],
-                        ),
-            ),
-          ),
-        ],
-      ),
+              child: const Icon(Icons.add, color: AppColors.white),
+            )
+          : null,
       bottomNavigationBar: const BottomNav(indexActuel: 2),
     );
   }

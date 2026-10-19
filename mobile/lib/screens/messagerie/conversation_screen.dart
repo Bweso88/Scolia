@@ -143,7 +143,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     widget.sousTitre!,
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.white.withOpacity(0.8)),
+                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted),
                   ),
                 ),
               )

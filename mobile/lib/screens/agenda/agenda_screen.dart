@@ -12,6 +12,7 @@ import '../../services/academic_event_service.dart';
 import '../../services/announcement_service.dart';
 import '../../services/children_service.dart';
 import '../../widgets/animated_entry.dart';
+import '../../widgets/app_header.dart';
 import '../../widgets/archivable_tile.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
@@ -128,55 +129,87 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.light,
-      appBar: AppBar(
-        title: const Text('Agenda'),
-        actions: [
-          if (peutPublier)
-            IconButton(
-              icon: const Icon(Icons.campaign_outlined, color: AppColors.white),
-              tooltip: 'Nouvelle annonce',
-              onPressed: () async {
-                final publie = await context.push<bool>('/agenda/nouvelle-annonce');
-                if (publie == true) _charger();
-              },
-            ),
-          if (peutGererEvenements)
-            IconButton(
-              icon: const Icon(Icons.event_outlined, color: AppColors.white),
-              tooltip: 'Nouvel événement',
-              onPressed: () async {
-                final cree = await context.push<bool>('/agenda/nouvel-evenement');
-                if (cree == true) _charger();
-              },
-            ),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _charger,
+            child: _charge
+                ? ListView(padding: EdgeInsets.only(top: AppHeader.hauteur + 40), children: const [Center(child: CircularProgressIndicator())])
+                : ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(16, AppHeader.hauteur + 16, 16, 24),
+                    children: [
+                      if (estParent) ...[const ChildSelector(), const SizedBox(height: 14)],
+                      _filtres(),
+                      const SizedBox(height: 20),
+                      if (_filtre != _Filtre.evenements) ..._sectionAnnonces(),
+                      if (_filtre != _Filtre.annonces) ..._sectionEvenements(),
+                      if (_annonces.isEmpty && _evenements.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 40),
+                          child: EmptyState(
+                            message: 'Rien pour l\'instant',
+                            sousTitre: 'Les annonces et les événements à venir apparaîtront ici.',
+                            icone: Icons.calendar_month_outlined,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+          const Positioned(top: 0, left: 0, right: 0, child: AppHeader()),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _charger,
-        child: _charge
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: [
-                  if (estParent) ...[const ChildSelector(), const SizedBox(height: 14)],
-                  _filtres(),
-                  const SizedBox(height: 20),
-                  if (_filtre != _Filtre.evenements) ..._sectionAnnonces(),
-                  if (_filtre != _Filtre.annonces) ..._sectionEvenements(),
-                  if (_annonces.isEmpty && _evenements.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 40),
-                      child: EmptyState(
-                        message: 'Rien pour l\'instant',
-                        sousTitre: 'Les annonces et les événements à venir apparaîtront ici.',
-                        icone: Icons.calendar_month_outlined,
-                      ),
-                    ),
-                ],
-              ),
-      ),
+      floatingActionButton: _boutonCreation(peutPublier, peutGererEvenements),
       bottomNavigationBar: const BottomNav(indexActuel: 4),
+    );
+  }
+
+  Widget? _boutonCreation(bool peutPublier, bool peutGererEvenements) {
+    if (!peutPublier && !peutGererEvenements) return null;
+    if (peutPublier && peutGererEvenements) {
+      return FloatingActionButton(
+        backgroundColor: _Ag.primary,
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          builder: (_) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.campaign_outlined, color: _Ag.primary),
+                  title: const Text('Nouvelle annonce'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final publie = await context.push<bool>('/agenda/nouvelle-annonce');
+                    if (publie == true) _charger();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event_outlined, color: _Ag.primary),
+                  title: const Text('Nouvel événement'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final cree = await context.push<bool>('/agenda/nouvel-evenement');
+                    if (cree == true) _charger();
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+        child: const Icon(Icons.add, color: AppColors.white),
+      );
+    }
+    return FloatingActionButton(
+      backgroundColor: _Ag.primary,
+      tooltip: peutPublier ? 'Nouvelle annonce' : 'Nouvel événement',
+      onPressed: () async {
+        final resultat = await context.push<bool>(peutPublier ? '/agenda/nouvelle-annonce' : '/agenda/nouvel-evenement');
+        if (resultat == true) _charger();
+      },
+      child: Icon(peutPublier ? Icons.campaign_outlined : Icons.event_outlined, color: AppColors.white),
     );
   }
 

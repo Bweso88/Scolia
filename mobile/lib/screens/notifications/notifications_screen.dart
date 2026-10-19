@@ -88,7 +88,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           if (_nbNonLues > 0)
             TextButton(
               onPressed: _toutMarquerLu,
-              child: Text('Tout lire', style: GoogleFonts.plusJakartaSans(color: AppColors.white, fontSize: 13)),
+              child: Text('Tout lire', style: GoogleFonts.plusJakartaSans(color: AppColors.blue, fontSize: 13, fontWeight: FontWeight.w600)),
             ),
         ],
       ),

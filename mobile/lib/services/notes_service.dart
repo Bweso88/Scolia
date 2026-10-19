@@ -11,6 +11,21 @@ class NotesService {
     return (data['data'] as List).map((e) => Periode.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Création par la direction d'une période de notation (ex. "1er
+  /// trimestre", "Compositions de janvier") — sans ça, les enseignants ne
+  /// peuvent saisir aucune note, le champ étant obligatoire sur chaque note.
+  Future<void> creerPeriode({required String label, required int anneeScolaireId}) async {
+    await apiService.post('/admin/grading-periods', body: {'label': label, 'school_year_id': anneeScolaireId});
+  }
+
+  Future<void> modifierPeriode(int id, String label) async {
+    await apiService.patch('/admin/grading-periods/$id', body: {'label': label});
+  }
+
+  Future<void> supprimerPeriode(int id) async {
+    await apiService.delete('/admin/grading-periods/$id');
+  }
+
   Future<void> saisirNote(Map<String, dynamic> corps) async {
     await apiService.post('/admin/grades', body: corps);
   }
