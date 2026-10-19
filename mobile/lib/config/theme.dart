@@ -37,7 +37,7 @@ class AppColors {
   static const muted  = Color(0xFF8E99B4);
   static const green  = Color(0xFF00A572);
   static const red    = Color(0xFFDC2626);
-  static const blue   = Color(0xFF1D63FD);
+  static const blue   = Color(0xFF2563EB);
   static const purple = Color(0xFF7E34FD);
   static const orange = Color(0xFFFF781A);
   static const light  = Color(0xFFEFF2FA);

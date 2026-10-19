@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\AcademicEventResource;
 use App\Http\Resources\Api\V1\AnnouncementResource;
 use App\Http\Resources\Api\V1\AttendanceRecordResource;
 use App\Http\Resources\Api\V1\BehaviorObservationResource;
@@ -15,6 +16,7 @@ use App\Models\Announcement;
 use App\Models\AttendanceRecord;
 use App\Models\BehaviorObservation;
 use App\Models\Homework;
+use App\Models\HomeworkStatus;
 use App\Models\Message;
 use App\Models\Student;
 use App\Models\TeacherAssignment;
@@ -64,7 +66,7 @@ class ChildrenController extends Controller
             'homeworks_today' => HomeworkResource::collection(
                 Homework::where('school_class_id', $student->school_class_id)
                     ->whereDate('due_date', $today)
-                    ->with(['subject', 'teacher.user'])
+                    ->with(['subject', 'teacher.user', 'attachments', 'statuses' => fn ($q) => $q->where('student_id', $student->id)])
                     ->get()
             ),
             'latest_messages' => Message::whereHas('conversation', fn ($q) => $q->where('student_id', $student->id))
@@ -77,7 +79,9 @@ class ChildrenController extends Controller
             'recent_attendance' => AttendanceRecordResource::collection(
                 $student->attendanceRecords()->latest('date')->limit(3)->get()
             ),
-            'next_event' => AcademicEvent::where('start_date', '>=', $today)->orderBy('start_date')->first(),
+            'next_events' => AcademicEventResource::collection(
+                AcademicEvent::where('start_date', '>=', $today)->orderBy('start_date')->limit(3)->get()
+            ),
             'today_timetable' => TimetableSlotResource::collection(
                 TimetableSlot::where('school_class_id', $student->school_class_id)
                     ->where('day_of_week', $today->dayOfWeekIso)
@@ -99,7 +103,7 @@ class ChildrenController extends Controller
         $today = today();
 
         $query = Homework::where('school_class_id', $student->school_class_id)
-            ->with(['subject', 'teacher.user']);
+            ->with(['subject', 'teacher.user', 'attachments', 'statuses' => fn ($q) => $q->where('student_id', $student->id)]);
 
         match ($request->string('range', 'week')->value()) {
             'today' => $query->whereDate('due_date', $today),
@@ -109,6 +113,30 @@ class ChildrenController extends Controller
         };
 
         return HomeworkResource::collection($query->orderBy('due_date')->get());
+    }
+
+    /**
+     * Bascule l'état "fait" d'un devoir pour cet enfant (coché par le
+     * parent depuis le cahier de texte) — seule écriture de cet espace,
+     * volontairement ciblée : elle ne modifie que la ligne de statut de
+     * l'enfant concerné, jamais le devoir lui-même.
+     */
+    public function toggleHomeworkStatus(Request $request, Student $student, Homework $homework)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+        abort_unless($homework->school_class_id === $student->school_class_id, 404);
+
+        $status = HomeworkStatus::firstOrCreate(
+            ['homework_id' => $homework->id, 'student_id' => $student->id],
+            ['status' => 'pending']
+        );
+        $status->update([
+            'status' => $status->status === 'done' ? 'pending' : 'done',
+            'marked_by_user_id' => $request->user()->id,
+        ]);
+
+        return response()->json(['status' => $status->status]);
     }
 
     public function behavior(Request $request, Student $student)

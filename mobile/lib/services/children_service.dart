@@ -29,6 +29,13 @@ class ChildrenService {
     return (data['data'] as List).map((e) => Homework.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Bascule le statut "fait" d'un devoir pour cet enfant, retourne le
+  /// nouveau statut ('pending' ou 'done').
+  Future<String> basculerStatutDevoir(int studentId, int homeworkId) async {
+    final data = await apiService.patch('/children/$studentId/homeworks/$homeworkId/status');
+    return data['status'] as String;
+  }
+
   Future<List<Remarque>> getComportement(int studentId) async {
     final data = await apiService.get('/children/$studentId/behavior');
     return (data['data'] as List).map((e) => Remarque.fromJson(e as Map<String, dynamic>)).toList();
