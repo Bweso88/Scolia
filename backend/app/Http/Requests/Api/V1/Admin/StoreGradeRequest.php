@@ -20,6 +20,7 @@ class StoreGradeRequest extends FormRequest
         return [
             'student_id' => ['required', Rule::exists('students', 'id')->where('tenant_id', $tenantId)],
             'subject_id' => ['required', Rule::exists('subjects', 'id')->where('tenant_id', $tenantId)],
+            'homework_id' => ['nullable', Rule::exists('homeworks', 'id')->where('tenant_id', $tenantId)],
             'grading_period_id' => ['required', Rule::exists('grading_periods', 'id')->where('tenant_id', $tenantId)],
             'type' => ['required', Rule::in(['interrogation', 'devoir', 'partiel', 'composition', 'examen'])],
             'score' => ['required', 'numeric', 'min:0'],

@@ -191,7 +191,7 @@ class ChildrenController extends Controller
         $this->ensureActivatedForParent($request, $student);
         abort_unless($student->tenant->isModuleEnabled('notes'), 403, "Le module notes n'est pas activé pour cette école.");
 
-        $grades = $student->grades()->with(['subject', 'gradingPeriod'])->orderByDesc('created_at')->paginate();
+        $grades = $student->grades()->with(['subject', 'gradingPeriod', 'homework'])->orderByDesc('created_at')->paginate();
 
         return GradeResource::collection($grades);
     }

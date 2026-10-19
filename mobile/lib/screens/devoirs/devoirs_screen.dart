@@ -557,6 +557,11 @@ class _CarteDevoirPersonnel extends StatelessWidget {
               ],
             ),
           ),
+          IconButton(
+            tooltip: 'Noter les élèves',
+            icon: const Icon(Icons.edit_note_rounded, color: AppColors.blue),
+            onPressed: () => context.push('/notes/noter-devoir', extra: devoir),
+          ),
         ],
       ),
     );

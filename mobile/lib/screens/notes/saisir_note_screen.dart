@@ -103,7 +103,7 @@ class _SaisirNoteScreenState extends State<SaisirNoteScreen> {
       });
       if (mounted) {
         showSuccessToast(context, 'Note enregistrée.');
-        context.pop();
+        context.pop(true);
       }
     } on Exception catch (e) {
       if (mounted) _snack(e.toString().replaceFirst('Exception: ', ''), AppColors.red);

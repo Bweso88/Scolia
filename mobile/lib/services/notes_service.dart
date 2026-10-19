@@ -1,3 +1,4 @@
+import '../models/note.dart';
 import '../models/periode.dart';
 import 'api_service.dart';
 
@@ -12,5 +13,15 @@ class NotesService {
 
   Future<void> saisirNote(Map<String, dynamic> corps) async {
     await apiService.post('/admin/grades', body: corps);
+  }
+
+  /// Notes déjà saisies pour une classe (vue personnel) — filtrable par
+  /// devoir pour voir qui a déjà été noté sur un devoir précis.
+  Future<List<Note>> getNotesDeLaClasse({int? schoolClassId, int? homeworkId}) async {
+    final data = await apiService.get('/admin/grades', params: {
+      if (schoolClassId != null) 'school_class_id': schoolClassId,
+      if (homeworkId != null) 'homework_id': homeworkId,
+    });
+    return (data['data'] as List).map((e) => Note.fromJson(e as Map<String, dynamic>)).toList();
   }
 }

@@ -28,7 +28,9 @@ class Homework {
   final String? instructions;
   final String? dueDate;
   final String? publishedAt;
+  final int? subjectId;
   final String? subjectName;
+  final int? schoolClassId;
   final String? schoolClassName;
   final String? teacherName;
   final String status;
@@ -40,7 +42,9 @@ class Homework {
     this.instructions,
     this.dueDate,
     this.publishedAt,
+    this.subjectId,
     this.subjectName,
+    this.schoolClassId,
     this.schoolClassName,
     this.teacherName,
     this.status = 'pending',
@@ -55,7 +59,9 @@ class Homework {
         instructions:    j['instructions'] as String?,
         dueDate:         j['due_date'] as String?,
         publishedAt:     j['published_at'] as String?,
+        subjectId:       (j['subject'] as Map?)?['id'] as int?,
         subjectName:     (j['subject'] as Map?)?['name'] as String?,
+        schoolClassId:   (j['school_class'] as Map?)?['id'] as int?,
         schoolClassName: (j['school_class'] as Map?)?['name'] as String?,
         teacherName:     j['teacher_name'] as String?,
         status:          j['status'] as String? ?? 'pending',
@@ -71,7 +77,9 @@ class Homework {
         instructions: instructions,
         dueDate: dueDate,
         publishedAt: publishedAt,
+        subjectId: subjectId,
         subjectName: subjectName,
+        schoolClassId: schoolClassId,
         schoolClassName: schoolClassName,
         teacherName: teacherName,
         status: nouveauStatus,

@@ -18,8 +18,12 @@ class GradeController extends Controller
         $this->authorize('viewAny', Grade::class);
 
         $grades = Grade::query()
-            ->with(['subject', 'gradingPeriod'])
+            ->with(['subject', 'gradingPeriod', 'student'])
             ->when($request->integer('student_id'), fn ($query, $studentId) => $query->where('student_id', $studentId))
+            ->when($request->integer('homework_id'), fn ($query, $homeworkId) => $query->where('homework_id', $homeworkId))
+            ->when($request->integer('school_class_id'), fn ($query, $schoolClassId) => $query->whereHas(
+                'student', fn ($q) => $q->where('school_class_id', $schoolClassId)
+            ))
             ->orderByDesc('created_at')
             ->paginate();
 
@@ -35,7 +39,7 @@ class GradeController extends Controller
 
         Notification::send($grade->student->guardians, new NewGradeNotification($grade));
 
-        return new GradeResource($grade->load(['subject', 'gradingPeriod']));
+        return new GradeResource($grade->load(['subject', 'gradingPeriod', 'student']));
     }
 
     public function update(UpdateGradeRequest $request, Grade $grade)

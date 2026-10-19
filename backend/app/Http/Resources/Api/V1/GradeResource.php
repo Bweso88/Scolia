@@ -11,7 +11,11 @@ class GradeResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'student_id' => $this->student_id,
+            'student_name' => $this->whenLoaded('student', fn () => trim($this->student->first_name.' '.$this->student->last_name)),
             'subject' => $this->whenLoaded('subject', fn () => $this->subject->name),
+            'homework_id' => $this->homework_id,
+            'homework_title' => $this->whenLoaded('homework', fn () => $this->homework?->title),
             'grading_period' => $this->whenLoaded('gradingPeriod', fn () => $this->gradingPeriod->label),
             'type' => $this->type,
             'score' => (float) $this->score,

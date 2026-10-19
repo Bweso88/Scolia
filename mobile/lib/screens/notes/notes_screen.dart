@@ -9,6 +9,7 @@ import '../../widgets/child_selector.dart';
 import '../../widgets/empty_state.dart';
 import '../../models/note.dart';
 import '../../services/children_service.dart';
+import '../../services/notes_service.dart';
 
 /// Notes (docs/PRODUCT_ARCHITECTURE.md §10) : module activable/désactivable
 /// par école — l'API répond 403 avec un message explicite si désactivé.
@@ -21,16 +22,27 @@ class NotesScreen extends StatefulWidget {
 
 class _NotesScreenState extends State<NotesScreen> {
   final _childrenService = ChildrenService();
+  final _notesService = NotesService();
 
   List<Note> _notes = [];
   bool _charge = false;
   String? _erreur;
   int? _dernierEnfantId;
 
+  List<Note> _notesClasse = [];
+  bool _chargeClasse = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _charger());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthProvider>().user;
+      if (user?.estParent == true) {
+        _charger();
+      } else {
+        _chargerClasse();
+      }
+    });
   }
 
   Future<void> _charger() async {
@@ -44,6 +56,18 @@ class _NotesScreenState extends State<NotesScreen> {
       _erreur = e.toString().replaceFirst('Exception: ', '');
     } finally {
       if (mounted) setState(() => _charge = false);
+    }
+  }
+
+  Future<void> _chargerClasse() async {
+    final classes = context.read<AuthProvider>().user?.classes ?? [];
+    if (classes.isEmpty) return;
+    setState(() => _chargeClasse = true);
+    try {
+      _notesClasse = await _notesService.getNotesDeLaClasse(schoolClassId: classes.first.id);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _chargeClasse = false);
     }
   }
 
@@ -114,27 +138,61 @@ class _NotesScreenState extends State<NotesScreen> {
   Widget _vueEnseignant(BuildContext context) {
     return Stack(
       children: [
-        ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          children: [
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.groups_outlined, color: AppColors.navy),
-                title: Text('Voir ma classe',
-                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.navy)),
-                subtitle: Text('Liste des élèves',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
-                trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
-                onTap: () => context.go('/teacher/ma-classe'),
+        RefreshIndicator(
+          onRefresh: _chargerClasse,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
+            children: [
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.groups_outlined, color: AppColors.navy),
+                  title: Text('Voir ma classe',
+                      style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, color: AppColors.navy)),
+                  subtitle: Text('Liste des élèves',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
+                  onTap: () => context.go('/teacher/ma-classe'),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text('Notes récentes de la classe', style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy)),
+              const SizedBox(height: 10),
+              if (_chargeClasse)
+                const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
+              else if (_notesClasse.isEmpty)
+                const EmptyState(
+                  message: 'Aucune note saisie',
+                  sousTitre: 'Les notes que vous saisissez apparaîtront ici.',
+                  icone: Icons.bar_chart_outlined,
+                )
+              else
+                ..._notesClasse.map((n) => Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: n.couleur.withOpacity(0.12),
+                          child: Text(n.affichage.split('/').first, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 11, color: n.couleur)),
+                        ),
+                        title: Text(n.studentName ?? '—', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600, fontSize: 13.5, color: AppColors.navy)),
+                        subtitle: Text(
+                          [n.matiereNom, n.homeworkTitle].where((s) => s != null && s.isNotEmpty).join(' • '),
+                          style: GoogleFonts.plusJakartaSans(fontSize: 11.5, color: AppColors.muted),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Text(n.affichage, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, color: n.couleur, fontSize: 13)),
+                      ),
+                    )),
+            ],
+          ),
         ),
         Positioned(
           bottom: 16, right: 16,
           child: FloatingActionButton.extended(
-            onPressed: () => context.push('/notes/saisir'),
+            onPressed: () async {
+              final enregistre = await context.push<bool>('/notes/saisir');
+              if (enregistre == true) _chargerClasse();
+            },
             backgroundColor: AppColors.navy,
             icon: const Icon(Icons.add, color: AppColors.white),
             label: Text('Saisir une note',
@@ -199,6 +257,8 @@ class _CartePeriode extends StatelessWidget {
                             ],
                           ),
                           Text('Coeff. ${n.coefficient.toStringAsFixed(1)}', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted)),
+                          if (n.homeworkTitle != null && n.homeworkTitle!.isNotEmpty)
+                            Text('Devoir : ${n.homeworkTitle}', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted, fontStyle: FontStyle.italic)),
                           if (n.commentaire != null && n.commentaire!.isNotEmpty)
                             Text(n.commentaire!, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted, fontStyle: FontStyle.italic)),
                         ],

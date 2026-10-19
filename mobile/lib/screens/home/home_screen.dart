@@ -272,6 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _grilleAcces(context, [
         (Icons.groups_outlined, 'Ma classe', AppColors.blue, () => context.go('/teacher/ma-classe')),
         (Icons.assignment_outlined, 'Devoirs', AppColors.purple, () => context.go('/devoirs')),
+        (Icons.bar_chart_outlined, 'Notes', AppColors.green, () => context.go('/notes')),
         (Icons.event_busy_outlined, 'Absences', AppColors.orange, () => context.push('/absences')),
         (Icons.schedule_outlined, 'Emploi du temps', AppColors.amber, () => context.push('/calendrier')),
         if (estAdmin) (Icons.admin_panel_settings_outlined, 'Gestion', AppColors.blue, () => context.push('/gestion')),

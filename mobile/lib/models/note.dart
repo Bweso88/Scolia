@@ -7,7 +7,11 @@ import '../config/theme.dart';
 /// pondérée simple côté client à partir des notes reçues.
 class Note {
   final int id;
+  final int? studentId;
+  final String? studentName;
   final String? matiereNom;
+  final int? homeworkId;
+  final String? homeworkTitle;
   final String? periodeNom;
   final String type;
   final double score;
@@ -17,7 +21,11 @@ class Note {
 
   const Note({
     required this.id,
+    this.studentId,
+    this.studentName,
     this.matiereNom,
+    this.homeworkId,
+    this.homeworkTitle,
     this.periodeNom,
     this.type = 'devoir',
     required this.score,
@@ -27,14 +35,18 @@ class Note {
   });
 
   factory Note.fromJson(Map<String, dynamic> j) => Note(
-        id:          j['id'] as int,
-        matiereNom:  j['subject'] as String?,
-        periodeNom:  j['grading_period'] as String?,
-        type:        j['type'] as String? ?? 'devoir',
-        score:       double.tryParse(j['score'].toString()) ?? 0,
-        maxScore:    double.tryParse(j['max_score'].toString()) ?? 20,
-        coefficient: double.tryParse(j['coefficient'].toString()) ?? 1,
-        commentaire: j['comment'] as String?,
+        id:            j['id'] as int,
+        studentId:     j['student_id'] as int?,
+        studentName:   j['student_name'] as String?,
+        matiereNom:    j['subject'] as String?,
+        homeworkId:    j['homework_id'] as int?,
+        homeworkTitle: j['homework_title'] as String?,
+        periodeNom:    j['grading_period'] as String?,
+        type:          j['type'] as String? ?? 'devoir',
+        score:         double.tryParse(j['score'].toString()) ?? 0,
+        maxScore:      double.tryParse(j['max_score'].toString()) ?? 20,
+        coefficient:   double.tryParse(j['coefficient'].toString()) ?? 1,
+        commentaire:   j['comment'] as String?,
       );
 
   double get pourcentage => maxScore > 0 ? score / maxScore : 0;

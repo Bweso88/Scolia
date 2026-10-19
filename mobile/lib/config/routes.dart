@@ -39,6 +39,8 @@ import '../screens/profil/profil_screen.dart';
 import '../screens/profil/preferences_notifications_screen.dart';
 import '../screens/teacher/ma_classe_screen.dart';
 import '../screens/notes/saisir_note_screen.dart';
+import '../screens/notes/noter_devoir_screen.dart';
+import '../models/homework.dart';
 
 GoRouter buildRouter(BuildContext context) {
   final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -113,6 +115,10 @@ GoRouter buildRouter(BuildContext context) {
       GoRoute(
         path: '/notes/saisir',
         builder: (_, state) => SaisirNoteScreen(eleveId: state.extra as int?),
+      ),
+      GoRoute(
+        path: '/notes/noter-devoir',
+        builder: (_, state) => NoterDevoirScreen(devoir: state.extra as Homework),
       ),
       GoRoute(path: '/notifications',     builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/profil',            builder: (_, __) => const ProfilScreen()),
