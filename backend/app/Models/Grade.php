@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['student_id', 'subject_id', 'grading_period_id', 'score', 'max_score', 'coefficient', 'comment', 'entered_by_user_id'])]
+#[Fillable(['student_id', 'subject_id', 'grading_period_id', 'type', 'score', 'max_score', 'coefficient', 'comment', 'entered_by_user_id'])]
 class Grade extends Model
 {
     /** @use HasFactory<GradeFactory> */

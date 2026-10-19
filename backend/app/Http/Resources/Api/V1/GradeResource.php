@@ -13,6 +13,7 @@ class GradeResource extends JsonResource
             'id' => $this->id,
             'subject' => $this->whenLoaded('subject', fn () => $this->subject->name),
             'grading_period' => $this->whenLoaded('gradingPeriod', fn () => $this->gradingPeriod->label),
+            'type' => $this->type,
             'score' => (float) $this->score,
             'max_score' => (float) $this->max_score,
             'coefficient' => (float) $this->coefficient,

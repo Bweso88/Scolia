@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
 import '../../models/matiere.dart';
+import '../../models/note.dart';
 import '../../models/periode.dart';
 import '../../models/student.dart';
 import '../../services/notes_service.dart';
@@ -35,6 +36,7 @@ class _SaisirNoteScreenState extends State<SaisirNoteScreen> {
   int?    _eleveSelectionne;
   int?    _matiereSelectionnee;
   int?    _periodeSelectionnee;
+  String  _typeSelectionne = 'devoir';
   bool    _charge   = false;
   bool    _envoi    = false;
 
@@ -93,6 +95,7 @@ class _SaisirNoteScreenState extends State<SaisirNoteScreen> {
         'student_id':        _eleveSelectionne,
         'subject_id':        _matiereSelectionnee,
         'grading_period_id': _periodeSelectionnee,
+        'type':              _typeSelectionne,
         'score':             note,
         'max_score':         sur,
         'coefficient':       double.tryParse(_coeffCtrl.text.trim()) ?? 1,
@@ -166,6 +169,14 @@ class _SaisirNoteScreenState extends State<SaisirNoteScreen> {
                           items: _periodes.map((p) => DropdownMenuItem(value: p.id, child: Text(p.nom))).toList(),
                           onChanged: (v) => setState(() => _periodeSelectionnee = v),
                           validator: (v) => v == null ? 'Sélectionnez une période' : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        DropdownButtonFormField<String>(
+                          value: _typeSelectionne,
+                          decoration: const InputDecoration(labelText: 'Type d\'évaluation *'),
+                          items: typesNote.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                          onChanged: (v) => setState(() => _typeSelectionne = v!),
                         ),
 
                         const SizedBox(height: 20),

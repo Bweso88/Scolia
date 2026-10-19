@@ -270,6 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
         (Icons.campaign_outlined, 'Annonces', AppColors.navy, () => context.go('/liaison')),
         (Icons.calendar_today_outlined, 'Calendrier', AppColors.amber, () => context.push('/calendrier')),
         (Icons.forum_outlined, 'Messagerie', AppColors.blue, () => context.push('/messagerie')),
+        (Icons.payments_outlined, 'Paiement', AppColors.orange, () => context.push('/paiement')),
       ]),
     ];
   }

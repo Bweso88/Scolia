@@ -186,7 +186,20 @@ class _CartePeriode extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(n.matiereNom ?? '—', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.body)),
+                          Row(
+                            children: [
+                              Text(n.matiereNom ?? '—', style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.body)),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(color: AppColors.navy.withOpacity(0.08), borderRadius: BorderRadius.circular(5)),
+                                child: Text(
+                                  (typesNote[n.type] ?? n.type).toUpperCase(),
+                                  style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.3),
+                                ),
+                              ),
+                            ],
+                          ),
                           Text('Coeff. ${n.coefficient.toStringAsFixed(1)}', style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted)),
                           if (n.commentaire != null && n.commentaire!.isNotEmpty)
                             Text(n.commentaire!, style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.muted, fontStyle: FontStyle.italic)),

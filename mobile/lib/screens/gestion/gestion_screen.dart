@@ -25,6 +25,7 @@ class GestionScreen extends StatelessWidget {
             _Carte(icone: Icons.people_outline, titre: 'Élèves', couleur: AppColors.purple, onTap: () => context.push('/gestion/eleves')),
             _Carte(icone: Icons.school_outlined, titre: 'Professeurs', couleur: AppColors.blue, onTap: () => context.push('/gestion/professeurs')),
             _Carte(icone: Icons.menu_book_outlined, titre: 'Matières', couleur: AppColors.green, onTap: () => context.push('/gestion/matieres')),
+            _Carte(icone: Icons.payments_outlined, titre: 'Paiements', couleur: AppColors.orange, onTap: () => context.push('/gestion/paiements')),
           ],
         ),
       ),

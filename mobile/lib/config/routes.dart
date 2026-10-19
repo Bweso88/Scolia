@@ -24,6 +24,8 @@ import '../screens/gestion/professeurs_screen.dart';
 import '../screens/gestion/creer_professeur_screen.dart';
 import '../screens/gestion/eleves_gestion_screen.dart';
 import '../screens/gestion/creer_eleve_screen.dart';
+import '../screens/gestion/paiements_screen.dart';
+import '../screens/paiement/paiement_screen.dart';
 import '../models/school_class_admin.dart';
 import '../models/teacher_admin.dart';
 import '../models/student.dart';
@@ -97,6 +99,8 @@ GoRouter buildRouter(BuildContext context) {
         path: '/gestion/eleves/creer',
         builder: (_, state) => CreerEleveScreen(eleve: state.extra as Student?),
       ),
+      GoRoute(path: '/gestion/paiements',     builder: (_, __) => const PaiementsScreen()),
+      GoRoute(path: '/paiement',              builder: (_, __) => const PaiementScreen()),
       GoRoute(path: '/remarques',         builder: (_, __) => const RemarquesScreen()),
       GoRoute(
         path: '/remarques/nouvelle',
