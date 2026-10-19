@@ -20,9 +20,16 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _naviguer() async {
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (!mounted) return;
     final auth = context.read<AuthProvider>();
+    // Attend la vraie fin de la restauration de session (lecture du token +
+    // appel /me), pas seulement un délai fixe — sinon, sur une connexion
+    // lente, l'écran de connexion peut s'afficher brièvement avant de
+    // basculer tout seul vers l'accueil une fois la session restaurée.
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 1500)),
+      auth.sessionRestauree,
+    ]);
+    if (!mounted) return;
     context.go(auth.estConnecte ? '/accueil' : '/auth/connexion');
   }
 

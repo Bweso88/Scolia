@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/auth_context.dart';
 import '../models/user.dart';
@@ -13,12 +14,19 @@ class AuthProvider extends ChangeNotifier {
   List<AuthContext> _contexts = [];
   bool _charge = false;
   String? _erreur;
+  final Completer<void> _restaurationTerminee = Completer<void>();
 
   User?   get user       => _user;
   String? get token      => _token;
   bool    get estConnecte => _token != null && _user != null;
   bool    get charge     => _charge;
   String? get erreur     => _erreur;
+
+  /// Se termine une fois la tentative de restauration de session (au
+  /// démarrage) aboutie, succès ou échec — l'écran de démarrage l'attend
+  /// avant de décider où naviguer, pour ne jamais afficher la connexion
+  /// puis basculer tout seul vers l'accueil une fois la session restaurée.
+  Future<void> get sessionRestauree => _restaurationTerminee.future;
 
   /// Autres écoles accessibles avec la même identité parent
   /// (docs/PRODUCT_ARCHITECTURE.md §9) — vide si le compte n'est lié à
@@ -31,18 +39,22 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _restaurerSession() async {
-    final token = await _authService.chargerToken();
-    if (token == null) return;
-    _token = token;
-    apiService.setToken(token);
     try {
-      _user = await _authService.getProfil();
-      await _enregistrerTokenFCM();
-    } catch (_) {
-      _token = null;
-      apiService.setToken(null);
+      final token = await _authService.chargerToken();
+      if (token == null) return;
+      _token = token;
+      apiService.setToken(token);
+      try {
+        _user = await _authService.getProfil();
+        await _enregistrerTokenFCM();
+      } catch (_) {
+        _token = null;
+        apiService.setToken(null);
+      }
+      notifyListeners();
+    } finally {
+      _restaurationTerminee.complete();
     }
-    notifyListeners();
   }
 
   Future<void> seConnecter(String email, String motDePasse) async {
