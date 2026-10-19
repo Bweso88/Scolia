@@ -10,6 +10,8 @@ class Remarque {
   final String? occurredAt;
   final bool visibleToParent;
   final String? authorName;
+  final String? acknowledgedAt;
+  final String? acknowledgedByName;
 
   const Remarque({
     required this.id,
@@ -20,16 +22,22 @@ class Remarque {
     this.occurredAt,
     required this.visibleToParent,
     this.authorName,
+    this.acknowledgedAt,
+    this.acknowledgedByName,
   });
 
+  bool get estAcquittee => acknowledgedAt != null;
+
   factory Remarque.fromJson(Map<String, dynamic> j) => Remarque(
-        id:              j['id'] as int,
-        studentId:       j['student_id'] as int,
-        category:        j['category'] as String? ?? 'note_generale',
-        title:           j['title'] as String,
-        description:     j['description'] as String?,
-        occurredAt:      j['occurred_at'] as String?,
-        visibleToParent: j['visible_to_parent'] as bool? ?? true,
-        authorName:      j['author_name'] as String?,
+        id:                 j['id'] as int,
+        studentId:          j['student_id'] as int,
+        category:           j['category'] as String? ?? 'note_generale',
+        title:              j['title'] as String,
+        description:        j['description'] as String?,
+        occurredAt:         j['occurred_at'] as String?,
+        visibleToParent:    j['visible_to_parent'] as bool? ?? true,
+        authorName:         j['author_name'] as String?,
+        acknowledgedAt:      j['acknowledged_at'] as String?,
+        acknowledgedByName:  j['acknowledged_by_name'] as String?,
       );
 }

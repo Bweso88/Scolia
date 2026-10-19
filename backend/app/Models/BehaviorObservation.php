@@ -22,6 +22,7 @@ class BehaviorObservation extends Model
         return [
             'occurred_at' => 'datetime',
             'visible_to_parent' => 'boolean',
+            'acknowledged_at' => 'datetime',
         ];
     }
 
@@ -33,5 +34,21 @@ class BehaviorObservation extends Model
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_user_id');
+    }
+
+    public function acknowledgedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'acknowledged_by_user_id');
+    }
+
+    /**
+     * Le représentant légal confirme avoir lu l'observation (accusé de
+     * lecture, écran "Suivi" de l'espace parent).
+     */
+    public function acquitterPar(User $user): void
+    {
+        $this->acknowledged_at = now();
+        $this->acknowledged_by_user_id = $user->id;
+        $this->save();
     }
 }

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/child_provider.dart';
 import '../../config/theme.dart';
-import '../../widgets/bottom_nav.dart';
 import '../../widgets/child_selector.dart';
 import '../../widgets/empty_state.dart';
 import '../../models/note.dart';
@@ -64,7 +63,6 @@ class _NotesScreenState extends State<NotesScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Notes')),
       body: user?.estParent == true ? _vueParent() : _vueEnseignant(context),
-      bottomNavigationBar: const BottomNav(indexActuel: 4),
     );
   }
 

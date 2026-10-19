@@ -42,6 +42,17 @@ class BehaviorObservationPolicy
     }
 
     /**
+     * Seul le parent (représentant légal) de l'élève concerné accuse
+     * réception — pas l'auteur ni le reste du personnel.
+     */
+    public function acknowledge(User $user, BehaviorObservation $observation): bool
+    {
+        return $user->tenant_id === $observation->tenant_id
+            && $observation->visible_to_parent
+            && $observation->student->guardians()->whereKey($user->id)->exists();
+    }
+
+    /**
      * Seuls l'auteur de l'observation ou l'administration peuvent la
      * supprimer (correction d'une erreur de saisie).
      */

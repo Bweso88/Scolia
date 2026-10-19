@@ -119,7 +119,7 @@ class ChildrenController extends Controller
         $observations = BehaviorObservation::where('student_id', $student->id)
             ->where('visible_to_parent', true)
             ->notArchivedBy($request->user()->id)
-            ->with('author')
+            ->with(['author', 'acknowledgedBy'])
             ->orderByDesc('occurred_at')
             ->paginate();
 

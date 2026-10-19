@@ -6,7 +6,6 @@ import '../../config/theme.dart';
 import '../../models/student.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/student_service.dart';
-import '../../widgets/bottom_nav.dart';
 import '../../widgets/empty_state.dart';
 
 class MaClasseScreen extends StatefulWidget {
@@ -105,7 +104,6 @@ class _MaClasseScreenState extends State<MaClasseScreen> {
         label: Text('Saisir une note',
             style: GoogleFonts.plusJakartaSans(color: AppColors.white, fontWeight: FontWeight.w600)),
       ),
-      bottomNavigationBar: const BottomNav(indexActuel: 4),
     );
   }
 }

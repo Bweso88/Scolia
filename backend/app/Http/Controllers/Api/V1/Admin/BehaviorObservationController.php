@@ -17,7 +17,7 @@ class BehaviorObservationController extends Controller
         $this->authorize('viewAny', BehaviorObservation::class);
 
         $observations = BehaviorObservation::query()
-            ->with('author')
+            ->with(['author', 'acknowledgedBy'])
             ->notArchivedBy($request->user()->id)
             ->when($request->integer('student_id'), fn ($query, $studentId) => $query->where('student_id', $studentId))
             ->when(
@@ -52,7 +52,7 @@ class BehaviorObservationController extends Controller
     {
         $this->authorize('view', $behaviorObservation);
 
-        return new BehaviorObservationResource($behaviorObservation->load('author'));
+        return new BehaviorObservationResource($behaviorObservation->load(['author', 'acknowledgedBy']));
     }
 
     public function destroy(BehaviorObservation $behaviorObservation)
@@ -84,5 +84,17 @@ class BehaviorObservationController extends Controller
         $behaviorObservation->desarchiverPour(request()->user()->id);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Le parent confirme avoir lu l'observation (écran "Suivi").
+     */
+    public function acknowledge(Request $request, BehaviorObservation $behaviorObservation)
+    {
+        $this->authorize('acknowledge', $behaviorObservation);
+
+        $behaviorObservation->acquitterPar($request->user());
+
+        return new BehaviorObservationResource($behaviorObservation->load(['author', 'acknowledgedBy']));
     }
 }

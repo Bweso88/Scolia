@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AcademicEventController;
 use App\Http\Controllers\Api\V1\Admin\AnnouncementController;
 use App\Http\Controllers\Api\V1\Admin\AttendanceRecordController;
 use App\Http\Controllers\Api\V1\Admin\BehaviorObservationController;
@@ -51,6 +52,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('behavior-observations.archive');
     Route::delete('behavior-observations/{behavior_observation}/archive', [BehaviorObservationController::class, 'unarchive'])
         ->name('behavior-observations.unarchive');
+    Route::post('behavior-observations/{behavior_observation}/acknowledge', [BehaviorObservationController::class, 'acknowledge'])
+        ->name('behavior-observations.acknowledge');
 
     Route::apiResource('attendance-records', AttendanceRecordController::class)
         ->only(['index', 'store', 'show']);
@@ -78,6 +81,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
     Route::apiResource('timetable-slots', TimetableSlotController::class)
         ->except(['create', 'edit']);
+
+    Route::apiResource('academic-events', AcademicEventController::class)
+        ->only(['index', 'store', 'destroy']);
 
     Route::patch('teachers/{teacher}/messaging-permission', [MessagingPermissionController::class, 'update'])
         ->name('teachers.messaging-permission.update');

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
 import '../config/theme.dart';
 
-/// Les 4 premiers onglets (Accueil, Devoirs, Comportement, Annonces) sont
-/// communs aux deux profils, pour que `indexActuel` reste cohérent partout
-/// dans l'application ; seul le 5e diffère (Notes pour un parent, Ma
-/// classe pour l'enseignant) — docs/PRODUCT_ARCHITECTURE.md §10.
+/// Les mêmes 5 onglets pour tout le monde, parent comme personnel —
+/// repris du design fourni par l'utilisateur. "Ma classe" (personnel) et
+/// "Notes" (parent) restent accessibles depuis l'accueil plutôt que dans
+/// cette barre (docs/PRODUCT_ARCHITECTURE.md §10).
 ///
 /// Barre flottante arrondie (plutôt que la NavigationBar Material bord à
 /// bord) : l'onglet actif bascule sur un fond coloré avec une légère
@@ -18,27 +16,16 @@ class BottomNav extends StatelessWidget {
 
   const BottomNav({super.key, required this.indexActuel});
 
-  static const _itemsParent = [
-    (icone: Icons.home_outlined,          label: 'Accueil',    route: '/accueil'),
-    (icone: Icons.assignment_outlined,    label: 'Devoirs',    route: '/devoirs'),
-    (icone: Icons.comment_outlined,       label: 'Comport.',   route: '/remarques'),
-    (icone: Icons.campaign_outlined,      label: 'Annonces',   route: '/liaison'),
-    (icone: Icons.bar_chart_outlined,     label: 'Notes',      route: '/notes'),
-  ];
-
-  static const _itemsPersonnel = [
-    (icone: Icons.home_outlined,          label: 'Accueil',    route: '/accueil'),
-    (icone: Icons.assignment_outlined,    label: 'Devoirs',    route: '/devoirs'),
-    (icone: Icons.comment_outlined,       label: 'Comport.',   route: '/remarques'),
-    (icone: Icons.campaign_outlined,      label: 'Annonces',   route: '/liaison'),
-    (icone: Icons.groups_outlined,        label: 'Ma classe',  route: '/teacher/ma-classe'),
+  static const _items = [
+    (icone: Icons.home_outlined,            label: 'Accueil',  route: '/accueil'),
+    (icone: Icons.assignment_outlined,      label: 'Devoirs',  route: '/devoirs'),
+    (icone: Icons.assignment_turned_in_outlined, label: 'Suivi', route: '/remarques'),
+    (icone: Icons.chat_bubble_outline_rounded, label: 'Messages', route: '/messagerie'),
+    (icone: Icons.calendar_month_outlined,  label: 'Agenda',   route: '/agenda'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    final items = user?.faitPartieDuPersonnel == true ? _itemsPersonnel : _itemsParent;
-
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Container(
@@ -51,7 +38,7 @@ class BottomNav extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: items.asMap().entries.map((entry) {
+          children: _items.asMap().entries.map((entry) {
             final i = entry.key;
             final item = entry.value;
             final actif = i == indexActuel;

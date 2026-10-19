@@ -7,6 +7,7 @@ import '../../models/conversation.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/messaging_service.dart';
 import '../../widgets/archivable_tile.dart';
+import '../../widgets/bottom_nav.dart';
 import '../../widgets/empty_state.dart';
 
 /// Liste des fils de discussion de l'utilisateur connecté — un parent y
@@ -144,6 +145,7 @@ class _MessagerieScreenState extends State<MessagerieScreen> {
               label: Text('Nouveau message', style: GoogleFonts.plusJakartaSans(color: AppColors.white, fontWeight: FontWeight.w600)),
             )
           : null,
+      bottomNavigationBar: const BottomNav(indexActuel: 3),
     );
   }
 }

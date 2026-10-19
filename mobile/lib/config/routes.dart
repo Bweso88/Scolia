@@ -11,8 +11,9 @@ import '../screens/absences/absences_screen.dart';
 import '../screens/absences/saisir_absence_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/fil_actualite/fil_actualite_screen.dart';
-import '../screens/liaison/liaison_screen.dart';
 import '../screens/liaison/nouveau_message_screen.dart';
+import '../screens/agenda/agenda_screen.dart';
+import '../screens/agenda/nouvel_evenement_screen.dart';
 import '../screens/messagerie/messagerie_screen.dart';
 import '../screens/messagerie/nouvelle_conversation_screen.dart';
 import '../screens/messagerie/conversation_screen.dart';
@@ -67,8 +68,9 @@ GoRouter buildRouter(BuildContext context) {
         path: '/absences/saisir',
         builder: (_, state) => SaisirAbsenceScreen(eleveId: state.extra as int?),
       ),
-      GoRoute(path: '/liaison',           builder: (_, __) => const LiaisonScreen()),
-      GoRoute(path: '/liaison/nouveau',   builder: (_, __) => const NouveauMessageScreen()),
+      GoRoute(path: '/agenda',            builder: (_, __) => const AgendaScreen()),
+      GoRoute(path: '/agenda/nouvelle-annonce', builder: (_, __) => const NouveauMessageScreen()),
+      GoRoute(path: '/agenda/nouvel-evenement', builder: (_, __) => const NouvelEvenementScreen()),
       GoRoute(path: '/messagerie',           builder: (_, __) => const MessagerieScreen()),
       GoRoute(path: '/messagerie/nouvelle',  builder: (_, __) => const NouvelleConversationScreen()),
       GoRoute(

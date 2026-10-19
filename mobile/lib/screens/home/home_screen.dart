@@ -264,12 +264,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _grilleAcces(context, [
         (Icons.dynamic_feed_outlined, 'Fil d\'actualité', AppColors.purple, () => context.push('/fil-actualite')),
         (Icons.assignment_outlined, 'Devoirs', AppColors.purple, () => context.go('/devoirs')),
-        (Icons.comment_outlined, 'Comportement', AppColors.blue, () => context.go('/remarques')),
         (Icons.event_busy_outlined, 'Absences', AppColors.orange, () => context.push('/absences')),
         (Icons.bar_chart_outlined, 'Notes', AppColors.green, () => context.go('/notes')),
-        (Icons.campaign_outlined, 'Annonces', AppColors.navy, () => context.go('/liaison')),
-        (Icons.calendar_today_outlined, 'Calendrier', AppColors.amber, () => context.push('/calendrier')),
-        (Icons.forum_outlined, 'Messagerie', AppColors.blue, () => context.push('/messagerie')),
+        (Icons.schedule_outlined, 'Emploi du temps', AppColors.amber, () => context.push('/calendrier')),
         (Icons.payments_outlined, 'Paiement', AppColors.orange, () => context.push('/paiement')),
       ]),
     ];
@@ -289,11 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _grilleAcces(context, [
         (Icons.groups_outlined, 'Ma classe', AppColors.navy, () => context.go('/teacher/ma-classe')),
         (Icons.assignment_outlined, 'Devoirs', AppColors.purple, () => context.go('/devoirs')),
-        (Icons.comment_outlined, 'Comportement', AppColors.blue, () => context.go('/remarques')),
         (Icons.event_busy_outlined, 'Absences', AppColors.orange, () => context.push('/absences')),
-        (Icons.campaign_outlined, 'Annonces', AppColors.red, () => context.go('/liaison')),
-        (Icons.calendar_today_outlined, 'Calendrier', AppColors.amber, () => context.push('/calendrier')),
-        (Icons.forum_outlined, 'Messagerie', AppColors.blue, () => context.push('/messagerie')),
+        (Icons.schedule_outlined, 'Emploi du temps', AppColors.amber, () => context.push('/calendrier')),
         if (estAdmin) (Icons.admin_panel_settings_outlined, 'Gestion', AppColors.navy, () => context.push('/gestion')),
       ]),
     ];

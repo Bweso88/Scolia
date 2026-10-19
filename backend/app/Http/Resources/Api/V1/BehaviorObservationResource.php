@@ -18,6 +18,8 @@ class BehaviorObservationResource extends JsonResource
             'occurred_at' => $this->occurred_at?->toIso8601String(),
             'visible_to_parent' => $this->visible_to_parent,
             'author_name' => $this->whenLoaded('author', fn () => $this->author->name),
+            'acknowledged_at' => $this->acknowledged_at?->toIso8601String(),
+            'acknowledged_by_name' => $this->whenLoaded('acknowledgedBy', fn () => $this->acknowledgedBy?->name),
         ];
     }
 }

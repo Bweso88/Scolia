@@ -28,4 +28,10 @@ class RemarquesService {
   Future<void> supprimerRemarque(int id) async {
     await apiService.delete('/admin/behavior-observations/$id');
   }
+
+  /// Le parent confirme avoir lu l'observation (écran "Suivi").
+  Future<Remarque> acquitterRemarque(int id) async {
+    final data = await apiService.post('/admin/behavior-observations/$id/acknowledge');
+    return Remarque.fromJson(data['data'] as Map<String, dynamic>);
+  }
 }
