@@ -152,7 +152,7 @@ class _NotesScreenState extends State<NotesScreen> {
                   subtitle: Text('Liste des élèves',
                       style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppColors.muted)),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
-                  onTap: () => context.go('/teacher/ma-classe'),
+                  onTap: () => context.push('/teacher/ma-classe'),
                 ),
               ),
               const SizedBox(height: 16),
