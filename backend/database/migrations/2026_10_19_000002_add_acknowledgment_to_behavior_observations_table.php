@@ -14,10 +14,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('behavior_observations', function (Blueprint $table) {
-            $table->timestamp('acknowledged_at')->nullable()->after('visible_to_parent');
-            $table->foreignId('acknowledged_by_user_id')->nullable()->after('acknowledged_at')->constrained('users')->nullOnDelete();
-        });
+        if (! Schema::hasColumn('behavior_observations', 'acknowledged_at')) {
+            Schema::table('behavior_observations', function (Blueprint $table) {
+                $table->timestamp('acknowledged_at')->nullable()->after('visible_to_parent');
+            });
+        }
+
+        if (! Schema::hasColumn('behavior_observations', 'acknowledged_by_user_id')) {
+            Schema::table('behavior_observations', function (Blueprint $table) {
+                $table->unsignedBigInteger('acknowledged_by_user_id')->nullable()->after('acknowledged_at');
+            });
+        }
+
+        $contrainteExiste = collect(Schema::getForeignKeys('behavior_observations'))
+            ->contains(fn ($fk) => in_array('acknowledged_by_user_id', $fk['columns']));
+
+        if (! $contrainteExiste) {
+            Schema::table('behavior_observations', function (Blueprint $table) {
+                $table->foreign('acknowledged_by_user_id')->references('id')->on('users')->nullOnDelete();
+            });
+        }
     }
 
     /**
@@ -26,8 +42,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('behavior_observations', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('acknowledged_by_user_id');
-            $table->dropColumn('acknowledged_at');
+            $table->dropForeign(['acknowledged_by_user_id']);
+            $table->dropColumn(['acknowledged_by_user_id', 'acknowledged_at']);
         });
     }
 };

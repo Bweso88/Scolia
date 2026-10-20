@@ -16,9 +16,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('grades', function (Blueprint $table) {
-            $table->string('type')->default('devoir')->after('grading_period_id');
-        });
+        if (! Schema::hasColumn('grades', 'type')) {
+            Schema::table('grades', function (Blueprint $table) {
+                $table->string('type')->default('devoir')->after('grading_period_id');
+            });
+        }
     }
 
     /**
