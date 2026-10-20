@@ -1,0 +1,341 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\AcademicEventResource;
+use App\Http\Resources\Api\V1\AnnouncementResource;
+use App\Http\Resources\Api\V1\AttendanceRecordResource;
+use App\Http\Resources\Api\V1\BehaviorObservationResource;
+use App\Http\Resources\Api\V1\GradeResource;
+use App\Http\Resources\Api\V1\HomeworkResource;
+use App\Http\Resources\Api\V1\StudentResource;
+use App\Http\Resources\Api\V1\TimetableSlotResource;
+use App\Models\AcademicEvent;
+use App\Models\Announcement;
+use App\Models\AttendanceRecord;
+use App\Models\BehaviorObservation;
+use App\Models\Homework;
+use App\Models\HomeworkStatus;
+use App\Models\Message;
+use App\Models\Student;
+use App\Models\TeacherAssignment;
+use App\Models\TimetableSlot;
+use App\Models\User;
+use Illuminate\Http\Request;
+
+/**
+ * Consultation par un parent des données de ses propres enfants
+ * (docs/PRODUCT_ARCHITECTURE.md §9 et §12). Toute route ici est protégée
+ * par la même StudentPolicy que le back-office : un parent n'accède qu'à
+ * ses enfants, un membre du personnel accède à toute l'école.
+ */
+class ChildrenController extends Controller
+{
+    public function index(Request $request)
+    {
+        $children = $request->user()->students()->with('schoolClass')->get();
+
+        return StudentResource::collection($children);
+    }
+
+    /**
+     * Simule l'activation payante par enfant (docs/PRODUCT_ARCHITECTURE.md
+     * §18) : un parent voit toujours ses enfants dans la liste (index),
+     * mais aucun détail tant que l'enfant n'est pas activé. Le personnel
+     * de l'école n'est jamais bloqué par cette vérification.
+     */
+    private function ensureActivatedForParent(Request $request, Student $student): void
+    {
+        abort_if(
+            $request->user()->hasRole('parent') && ! $student->isActivated(),
+            403,
+            "Cet enfant n'est pas encore activé. Contactez l'administration de l'école."
+        );
+    }
+
+    public function dashboard(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $today = today();
+
+        return response()->json([
+            'student' => new StudentResource($student->load('schoolClass')),
+            'homeworks_today' => HomeworkResource::collection(
+                Homework::where('school_class_id', $student->school_class_id)
+                    ->whereDate('due_date', $today)
+                    ->with(['subject', 'teacher.user', 'attachments', 'statuses' => fn ($q) => $q->where('student_id', $student->id)])
+                    ->get()
+            ),
+            'latest_messages' => Message::whereHas('conversation', fn ($q) => $q->where('student_id', $student->id))
+                ->latest()
+                ->limit(3)
+                ->pluck('body'),
+            'recent_behavior' => BehaviorObservationResource::collection(
+                $student->behaviorObservations()->where('visible_to_parent', true)->latest('occurred_at')->limit(3)->get()
+            ),
+            'recent_attendance' => AttendanceRecordResource::collection(
+                $student->attendanceRecords()->latest('date')->limit(3)->get()
+            ),
+            'next_events' => AcademicEventResource::collection(
+                AcademicEvent::where('start_date', '>=', $today)->orderBy('start_date')->limit(3)->get()
+            ),
+            'today_timetable' => TimetableSlotResource::collection(
+                TimetableSlot::where('school_class_id', $student->school_class_id)
+                    ->where('day_of_week', $today->dayOfWeekIso)
+                    ->orderBy('start_time')
+                    ->with(['subject', 'teacher.user'])
+                    ->get()
+            ),
+        ]);
+    }
+
+    /**
+     * `range` : today | tomorrow | week (défaut) | late.
+     */
+    public function homeworks(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $today = today();
+
+        $query = Homework::where('school_class_id', $student->school_class_id)
+            ->with(['subject', 'teacher.user', 'attachments', 'statuses' => fn ($q) => $q->where('student_id', $student->id)]);
+
+        match ($request->string('range', 'week')->value()) {
+            'today' => $query->whereDate('due_date', $today),
+            'tomorrow' => $query->whereDate('due_date', $today->copy()->addDay()),
+            'late' => $query->whereDate('due_date', '<', $today),
+            default => $query->whereBetween('due_date', [$today, $today->copy()->addWeek()]),
+        };
+
+        return HomeworkResource::collection($query->orderBy('due_date')->get());
+    }
+
+    /**
+     * Bascule l'état "fait" d'un devoir pour cet enfant (coché par le
+     * parent depuis le cahier de texte) — seule écriture de cet espace,
+     * volontairement ciblée : elle ne modifie que la ligne de statut de
+     * l'enfant concerné, jamais le devoir lui-même.
+     */
+    public function toggleHomeworkStatus(Request $request, Student $student, Homework $homework)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+        abort_unless($homework->school_class_id === $student->school_class_id, 404);
+
+        $status = HomeworkStatus::firstOrCreate(
+            ['homework_id' => $homework->id, 'student_id' => $student->id],
+            ['status' => 'pending']
+        );
+        $status->update([
+            'status' => $status->status === 'done' ? 'pending' : 'done',
+            'marked_by_user_id' => $request->user()->id,
+        ]);
+
+        return response()->json(['status' => $status->status]);
+    }
+
+    public function behavior(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $observations = BehaviorObservation::where('student_id', $student->id)
+            ->where('visible_to_parent', true)
+            ->notArchivedBy($request->user()->id)
+            ->with(['author', 'acknowledgedBy'])
+            ->orderByDesc('occurred_at')
+            ->paginate();
+
+        return BehaviorObservationResource::collection($observations);
+    }
+
+    public function attendance(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $records = AttendanceRecord::where('student_id', $student->id)
+            ->with('justification')
+            ->orderByDesc('date')
+            ->paginate();
+
+        return AttendanceRecordResource::collection($records);
+    }
+
+    public function timetable(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $slots = TimetableSlot::where('school_class_id', $student->school_class_id)
+            ->with(['subject', 'teacher.user'])
+            ->orderBy('day_of_week')
+            ->orderBy('start_time')
+            ->get();
+
+        return TimetableSlotResource::collection($slots);
+    }
+
+    /**
+     * Le module notes/bulletins est activable/désactivable par école
+     * (docs/PRODUCT_ARCHITECTURE.md §4 et §18) sans changement de code.
+     */
+    public function grades(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+        abort_unless($student->tenant->isModuleEnabled('notes'), 403, "Le module notes n'est pas activé pour cette école.");
+
+        $grades = $student->grades()->with(['subject', 'gradingPeriod', 'homework'])->orderByDesc('created_at')->paginate();
+
+        return GradeResource::collection($grades);
+    }
+
+    public function announcements(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $announcements = AnnouncementResource::collection(
+            Announcement::whereHas('targets', function ($q) use ($student) {
+                $q->where('target_type', 'all')
+                    ->orWhere(fn ($qq) => $qq->where('target_type', 'school_class')->where('target_id', $student->school_class_id));
+            })
+                ->notArchivedBy($request->user()->id)
+                ->orderByDesc('published_at')->paginate()
+        );
+
+        return $announcements;
+    }
+
+    /**
+     * Fil d'actualité de l'espace parent (docs/PRODUCT_ARCHITECTURE.md) :
+     * récapitulatif, dans l'ordre chronologique inverse, des annonces de
+     * l'école et des éléments récents concernant cet enfant (comportement,
+     * devoirs, absences) — un recap des mêmes informations que les menus,
+     * réunies en un seul flux.
+     */
+    public function feed(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $limite = 30;
+
+        $annonces = Announcement::whereHas('targets', function ($q) use ($student) {
+            $q->where('target_type', 'all')
+                ->orWhere(fn ($qq) => $qq->where('target_type', 'school_class')->where('target_id', $student->school_class_id));
+        })
+            ->notArchivedBy($request->user()->id)
+            ->with('author')
+            ->latest('published_at')
+            ->limit($limite)
+            ->get()
+            ->map(fn (Announcement $a) => [
+                'type' => 'annonce',
+                'id' => $a->id,
+                'titre' => $a->title,
+                'corps' => $a->body,
+                'photo_url' => $a->photoUrl(),
+                'horodatage' => $a->published_at?->toIso8601String(),
+                'auteur' => $a->author?->name,
+            ]);
+
+        $comportements = BehaviorObservation::where('student_id', $student->id)
+            ->where('visible_to_parent', true)
+            ->notArchivedBy($request->user()->id)
+            ->with('author')
+            ->latest('occurred_at')
+            ->limit($limite)
+            ->get()
+            ->map(fn (BehaviorObservation $b) => [
+                'type' => 'comportement',
+                'id' => $b->id,
+                'titre' => $b->title,
+                'corps' => $b->description,
+                'categorie' => $b->category,
+                'horodatage' => $b->occurred_at?->toIso8601String(),
+                'auteur' => $b->author?->name,
+            ]);
+
+        $devoirs = Homework::where('school_class_id', $student->school_class_id)
+            ->whereNotNull('published_at')
+            ->latest('due_date')
+            ->limit($limite)
+            ->get()
+            ->map(fn (Homework $h) => [
+                'type' => 'devoir',
+                'id' => $h->id,
+                'titre' => $h->title,
+                'corps' => $h->instructions,
+                'horodatage' => $h->due_date?->toIso8601String(),
+                'auteur' => null,
+            ]);
+
+        $absences = AttendanceRecord::where('student_id', $student->id)
+            ->latest('date')
+            ->limit($limite)
+            ->get()
+            ->map(fn (AttendanceRecord $a) => [
+                'type' => 'absence',
+                'id' => $a->id,
+                'titre' => match ($a->type) {
+                    'absence' => 'Absence',
+                    'retard' => 'Retard',
+                    default => ucfirst($a->type),
+                },
+                'corps' => $a->reason,
+                'horodatage' => $a->date?->toIso8601String(),
+                'auteur' => null,
+            ]);
+
+        $fil = collect()
+            ->merge($annonces)
+            ->merge($comportements)
+            ->merge($devoirs)
+            ->merge($absences)
+            ->filter(fn (array $item) => $item['horodatage'] !== null)
+            ->sortByDesc('horodatage')
+            ->values()
+            ->take($limite);
+
+        return response()->json(['items' => $fil]);
+    }
+
+    /**
+     * Destinataires possibles pour un parent souhaitant écrire à propos de
+     * cet enfant : les enseignants de sa classe (joignables directement
+     * seulement si l'école l'a autorisé, voir MessagingPermission) et,
+     * toujours, la direction — recours par défaut quand un enseignant ne
+     * l'est pas (docs/PRODUCT_ARCHITECTURE.md §7).
+     */
+    public function messagingContacts(Request $request, Student $student)
+    {
+        $this->authorize('view', $student);
+        $this->ensureActivatedForParent($request, $student);
+
+        $teachers = TeacherAssignment::where('school_class_id', $student->school_class_id)
+            ->with(['teacher.user', 'subject'])
+            ->get()
+            ->unique('teacher_id')
+            ->map(fn (TeacherAssignment $assignment) => [
+                'user_id' => $assignment->teacher->user_id,
+                'name' => $assignment->teacher->user->name,
+                'subject' => $assignment->subject?->name,
+                'contactable' => (bool) $assignment->teacher->messagingPermission?->can_be_contacted_directly,
+            ])
+            ->values();
+
+        $direction = User::role(['school_admin', 'direction'])
+            ->get()
+            ->map(fn (User $user) => ['user_id' => $user->id, 'name' => $user->name])
+            ->values();
+
+        return response()->json(['teachers' => $teachers, 'direction' => $direction]);
+    }
+}

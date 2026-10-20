@@ -1,29 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// Transition fondu + léger glissement vers le haut, appliquée à toute
+/// navigation (GoRouter) sans devoir toucher chaque route une à une — le
+/// rendu par défaut de Flutter (slide latéral abrupt sur Android) donnait
+/// une impression "statique" à l'app.
+class _FadeThroughTransitionsBuilder extends PageTransitionsBuilder {
+  const _FadeThroughTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final courbe = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+    return FadeTransition(
+      opacity: courbe,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(courbe),
+        child: child,
+      ),
+    );
+  }
+}
+
 class AppColors {
-  static const navy   = Color(0xFF0D1B3E);
-  static const amber  = Color(0xFFF5A623);
+  static const navy   = Color(0xFF091B47);
+  static const amber  = Color(0xFFFFAC23);
   static const bg     = Color(0xFFF2F4F9);
   static const white  = Color(0xFFFFFFFF);
   static const border = Color(0xFFDDE2EF);
   static const body   = Color(0xFF4B5670);
   static const muted  = Color(0xFF8E99B4);
-  static const green  = Color(0xFF059669);
+  static const green  = Color(0xFF00A572);
   static const red    = Color(0xFFDC2626);
   static const blue   = Color(0xFF2563EB);
-  static const purple = Color(0xFF7C3AED);
-  static const orange = Color(0xFFF97316);
+  static const purple = Color(0xFF7E34FD);
+  static const orange = Color(0xFFFF781A);
   static const light  = Color(0xFFEFF2FA);
 }
 
-ThemeData buildTheme() {
+/// [primary]/[secondary] : couleurs de l'école chargées au runtime depuis
+/// son branding (docs/PRODUCT_ARCHITECTURE.md §16). À défaut (avant
+/// connexion, ou école n'ayant pas personnalisé ses couleurs), on retombe
+/// sur l'identité visuelle par défaut de Scolia.
+ThemeData buildTheme({Color? primary, Color? secondary}) {
+  final couleurPrimaire   = primary ?? AppColors.navy;
+  final couleurSecondaire = secondary ?? AppColors.amber;
+
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.navy,
-      primary: AppColors.navy,
-      secondary: AppColors.amber,
+      seedColor: couleurPrimaire,
+      primary: couleurPrimaire,
+      secondary: couleurSecondaire,
       surface: AppColors.bg,
     ),
     scaffoldBackgroundColor: AppColors.bg,
@@ -31,28 +64,37 @@ ThemeData buildTheme() {
       bodyMedium: GoogleFonts.plusJakartaSans(color: AppColors.body),
       bodySmall:  GoogleFonts.plusJakartaSans(color: AppColors.muted),
     ),
+    // Même langage visuel que l'en-tête partagé (AppHeader) des écrans
+    // principaux : clair, texte/icônes en navy — plutôt que l'ancien bandeau
+    // plein navy, pour que tout écran utilisant encore l'AppBar standard
+    // (formulaires, listes secondaires) reste visuellement cohérent avec le
+    // reste de l'app sans devoir migrer chaque écran un par un.
     appBarTheme: AppBarTheme(
-      backgroundColor: AppColors.navy,
-      foregroundColor: AppColors.white,
+      backgroundColor: AppColors.white,
+      foregroundColor: AppColors.navy,
       elevation: 0,
+      scrolledUnderElevation: 1,
+      shadowColor: AppColors.navy.withOpacity(0.1),
+      surfaceTintColor: AppColors.white,
+      iconTheme: const IconThemeData(color: AppColors.navy),
+      actionsIconTheme: const IconThemeData(color: AppColors.navy),
       titleTextStyle: GoogleFonts.plusJakartaSans(
-        color: AppColors.white,
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+        color: AppColors.navy,
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
       ),
     ),
-    cardTheme: const CardThemeData(
+    cardTheme: CardThemeData(
       color: AppColors.white,
       surfaceTintColor: AppColors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-        side: BorderSide(color: AppColors.border),
-      ),
+      elevation: 6,
+      shadowColor: AppColors.navy.withOpacity(0.16),
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.navy,
+        backgroundColor: couleurPrimaire,
         foregroundColor: AppColors.white,
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -63,17 +105,23 @@ ThemeData buildTheme() {
       filled: true,
       fillColor: AppColors.white,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: AppColors.navy, width: 2),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: couleurPrimaire, width: 2),
       ),
+    ),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: _FadeThroughTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      },
     ),
   );
   return base;

@@ -1,0 +1,35 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * Type d'évaluation (interrogation, devoir sur table, partiel,
+     * composition, examen) — une classification générale qui s'applique à
+     * toute école, indépendamment de son propre barème/coefficients
+     * (laissés à la saisie libre sur chaque note).
+     */
+    public function up(): void
+    {
+        if (! Schema::hasColumn('grades', 'type')) {
+            Schema::table('grades', function (Blueprint $table) {
+                $table->string('type')->default('devoir')->after('grading_period_id');
+            });
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('grades', function (Blueprint $table) {
+            $table->dropColumn('type');
+        });
+    }
+};
