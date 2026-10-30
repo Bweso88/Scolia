@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\ManagedByTalenda;
 use Database\Factories\StudentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Student extends Model
 {
     /** @use HasFactory<StudentFactory> */
-    use BelongsToTenant, HasFactory;
+    use BelongsToTenant, HasFactory, ManagedByTalenda;
+
+    public function talendaManagedAttributes(): array
+    {
+        return ['school_class_id', 'first_name', 'last_name', 'birth_date', 'gender', 'enrollment_number', 'status'];
+    }
 
     protected function casts(): array
     {

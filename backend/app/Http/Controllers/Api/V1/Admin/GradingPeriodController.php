@@ -41,7 +41,7 @@ class GradingPeriodController extends Controller
 
         if ($gradingPeriod->grades()->exists()) {
             throw ValidationException::withMessages([
-                'grading_period' => "Cette période contient déjà des notes, elle ne peut pas être supprimée.",
+                'grading_period' => 'Cette période contient déjà des notes, elle ne peut pas être supprimée.',
             ]);
         }
 
