@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SchoolClasses;
 
+use App\Filament\Concerns\ManagedInTalenda;
 use App\Filament\Resources\SchoolClasses\Pages\CreateSchoolClass;
 use App\Filament\Resources\SchoolClasses\Pages\EditSchoolClass;
 use App\Filament\Resources\SchoolClasses\Pages\ListSchoolClasses;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class SchoolClassResource extends Resource
 {
+    use ManagedInTalenda;
+
     protected static ?string $model = SchoolClass::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

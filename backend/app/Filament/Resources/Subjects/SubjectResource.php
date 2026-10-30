@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Subjects;
 
+use App\Filament\Concerns\ManagedInTalenda;
 use App\Filament\Resources\Subjects\Pages\CreateSubject;
 use App\Filament\Resources\Subjects\Pages\EditSubject;
 use App\Filament\Resources\Subjects\Pages\ListSubjects;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class SubjectResource extends Resource
 {
+    use ManagedInTalenda;
+
     protected static ?string $model = Subject::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Concerns\ManagedByTalenda;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -25,7 +26,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
-    use BelongsToTenant, HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use BelongsToTenant, HasApiTokens, HasFactory, HasRoles, ManagedByTalenda, Notifiable;
 
     /**
      * Le panel /admin (Filament) est réservé à la direction de l'école ;
@@ -34,6 +35,29 @@ class User extends Authenticatable implements FilamentUser
      * App\Http\Controllers\Api\V1\Auth\AuthController::respondWithToken
      * pour la même nécessité côté API.
      */
+    /**
+     * Compte d'un parent ou d'un enseignant venu de Talenda : son nom et ses
+     * coordonnées se modifient dans Talenda, et son mot de passe est celui
+     * de Talenda (voir AuthController::login).
+     */
+    public function isManagedByTalenda(): bool
+    {
+        return $this->getOriginal('talenda_account_uuid') !== null || $this->getOriginal('talenda_guardian_uuid') !== null;
+    }
+
+    public function talendaManagedAttributes(): array
+    {
+        return ['name', 'email', 'phone', 'password'];
+    }
+
+    /**
+     * Les comptes de la direction restent créés dans Scolia.
+     */
+    public function createdInTalenda(): bool
+    {
+        return false;
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         app(PermissionRegistrar::class)->setPermissionsTeamId($this->tenant_id);
