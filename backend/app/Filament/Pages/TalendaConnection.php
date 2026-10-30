@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\TenantSetting;
 use App\Services\Talenda\SyncFromTalenda;
+use App\Services\Talenda\UnlinkFromTalenda;
 use App\Support\Talenda\TalendaUnavailable;
 use App\Support\Tenancy\TenantContext;
 use BackedEnum;
@@ -103,6 +104,41 @@ class TalendaConnection extends Page
                 ->icon(Heroicon::OutlinedArrowPath)
                 ->visible(fn (): bool => $this->settings()->isConnectedToTalenda())
                 ->action(fn () => $this->synchronize()),
+            Action::make('unlink')
+                ->label('Délier de Talenda')
+                ->icon(Heroicon::OutlinedLinkSlash)
+                ->color('danger')
+                ->visible(fn (): bool => $this->settings()->isConnectedToTalenda())
+                ->requiresConfirmation()
+                ->modalHeading('Délier l\'école de Talenda ?')
+                ->modalDescription('Scolia redevient autonome : élèves, classes, matières, enseignants et parents sont conservés et se gèrent de nouveau ici. Les comptes déjà connectés à Scolia gardent leur mot de passe ; les autres reçoivent un mot de passe provisoire, dans un fichier à télécharger maintenant (il ne sera plus affiché).')
+                ->modalSubmitActionLabel('Délier')
+                ->action(function () {
+                    $passwords = app(UnlinkFromTalenda::class)->handle(app(TenantContext::class)->get());
+
+                    Notification::make()->success()
+                        ->title('École déliée de Talenda')
+                        ->body($passwords === [] ? 'Tous les comptes gardent leur mot de passe.' : count($passwords).' compte(s) ont reçu un mot de passe provisoire : voir le fichier téléchargé.')
+                        ->persistent()
+                        ->send();
+
+                    if ($passwords === []) {
+                        $this->redirect(static::getUrl());
+
+                        return null;
+                    }
+
+                    return response()->streamDownload(function () use ($passwords): void {
+                        $output = fopen('php://output', 'w');
+                        fputcsv($output, ['Nom', 'Téléphone', 'E-mail', 'Mot de passe provisoire'], ';');
+
+                        foreach ($passwords as $row) {
+                            fputcsv($output, [$row['name'], $row['phone'], $row['email'], $row['password']], ';');
+                        }
+
+                        fclose($output);
+                    }, 'mots-de-passe-provisoires.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+                }),
             Action::make('save')
                 ->label('Enregistrer et synchroniser')
                 ->icon(Heroicon::OutlinedCheck)

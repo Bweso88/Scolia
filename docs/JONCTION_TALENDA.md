@@ -4,8 +4,12 @@ Décision (2026-11-06) : pour une école qui utilise aussi **Talenda** (son
 logiciel de gestion : inscriptions, caisse, notes, vie scolaire), Talenda
 est la **référence** pour les élèves, classes, matières, enseignants et
 parents. Scolia garde la messagerie, le cahier de texte, les devoirs et
-l'emploi du temps. Une école sans Talenda continue de tout gérer dans
-Scolia, sans aucun changement.
+l'emploi du temps.
+
+**Scolia ne dépend pas de Talenda** : la jonction est une option, école
+par école. Une école sans Talenda gère tout dans Scolia, sans aucun
+changement ; une école reliée peut se délier à tout moment ; et une panne
+de Talenda n'empêche pas de se connecter à Scolia (voir plus bas).
 
 Côté Talenda, voir `docs/JONCTION_SCOLIA.md` du dépôt Talenda.
 
@@ -49,6 +53,11 @@ La clé est chiffrée en base (`tenant_settings.talenda_token`).
   vérifie l'identifiant et le mot de passe auprès de Talenda
   (`POST credentials/check`). Le parent utilise le mot de passe de l'app
   Talenda.
+- **Talenda en panne** : à chaque connexion réussie, Scolia garde une
+  copie hachée du mot de passe validé par Talenda. Si Talenda ne répond
+  pas, Scolia compare avec cette copie : un compte déjà connecté une fois
+  n'est jamais bloqué. Si Talenda refuse le mot de passe, la copie n'est
+  pas utilisée.
 
 ## Lecture seule
 
@@ -60,6 +69,22 @@ Quand l'école est reliée :
 - les champs propres à Scolia restent modifiables (activation de l'enfant,
   photo…) ;
 - les comptes de la direction se créent toujours dans Scolia.
+
+## Délier une école
+
+Page Talenda de `/admin` → « Délier de Talenda ». Scolia redevient
+autonome pour cette école :
+
+- toutes les fiches sont conservées et redeviennent modifiables et
+  créables dans Scolia ; la synchronisation s'arrête ;
+- les comptes déjà connectés à Scolia gardent leur mot de passe (celui de
+  Talenda) ;
+- les comptes jamais connectés reçoivent un mot de passe provisoire, dans
+  un fichier CSV téléchargé au moment de délier (affiché une seule fois),
+  à transmettre aux familles et aux enseignants.
+
+L'école peut se relier plus tard : la première synchronisation reprend les
+fiches existantes.
 
 ## À faire ensuite
 

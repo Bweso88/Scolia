@@ -8,6 +8,7 @@ use App\Models\TenantSetting;
 use App\Models\User;
 use App\Support\Talenda\PhoneNumber;
 use App\Support\Talenda\TalendaClient;
+use App\Support\Talenda\TalendaSync;
 use App\Support\Talenda\TalendaUnavailable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -47,13 +48,15 @@ class AuthController extends Controller
             }
 
             // Compte venu de Talenda : un seul mot de passe, celui de
-            // Talenda (docs/JONCTION_TALENDA.md).
+            // Talenda (docs/JONCTION_TALENDA.md). Si Talenda ne répond pas,
+            // Scolia accepte le dernier mot de passe que Talenda a validé :
+            // une panne de Talenda n'empêche pas d'utiliser Scolia.
             try {
                 return $this->talendaAccepts($candidate, $login, $credentials['password']);
             } catch (TalendaUnavailable) {
                 $talendaUnavailable = true;
 
-                return false;
+                return Hash::check($credentials['password'], $candidate->password);
             }
         });
 
@@ -83,7 +86,17 @@ class AuthController extends Controller
 
         $account = (new TalendaClient($settings))->checkCredentials($login, $password);
 
-        return $account !== null && $account['account_uuid'] === $user->talenda_account_uuid;
+        if ($account === null || $account['account_uuid'] !== $user->talenda_account_uuid) {
+            return false;
+        }
+
+        // Copie (hachée) du mot de passe validé par Talenda : sert si
+        // Talenda est injoignable, et reste valable si l'école se délie.
+        if (! Hash::check($password, $user->password)) {
+            TalendaSync::run(fn () => $user->forceFill(['password' => $password])->save());
+        }
+
+        return true;
     }
 
     public function selectContext(Request $request)

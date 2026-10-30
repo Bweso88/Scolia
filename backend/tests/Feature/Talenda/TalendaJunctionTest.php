@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Models\User;
 use App\Services\Talenda\SyncFromTalenda;
+use App\Services\Talenda\UnlinkFromTalenda;
 use App\Support\Talenda\ManagedByTalendaException;
 use App\Support\Talenda\TalendaUnavailable;
 use App\Support\Tenancy\TenantContext;
@@ -39,6 +40,8 @@ class TalendaJunctionTest extends TestCase
      * @var array<string, mixed>
      */
     private array $talendaSnapshot = [];
+
+    private bool $talendaDown = false;
 
     protected function setUp(): void
     {
@@ -147,6 +150,7 @@ class TalendaJunctionTest extends TestCase
             ->patchJson("/api/v1/admin/students/{$student->id}/activation", ['active' => true])
             ->assertOk();
 
+        $this->actingAs($admin);
         $this->inTenant(function (): void {
             $this->assertFalse(StudentResource::canCreate());
             $this->expectException(ManagedByTalendaException::class);
@@ -159,11 +163,7 @@ class TalendaJunctionTest extends TestCase
         $this->fakeTalenda($this->snapshot());
         app(SyncFromTalenda::class)->handle($this->tenant);
 
-        Http::fake([
-            self::URL.'/credentials/check' => fn (Request $request) => $request['password'] === 'mot-de-passe-talenda'
-                ? Http::response(['account_uuid' => 'acc-parent', 'name' => 'Prisca Mabiala', 'phone' => '+242063333333', 'email' => null, 'must_change_password' => false, 'roles' => ['parent']])
-                : Http::response(['message' => 'Identifiants incorrects.', 'errors' => ['login' => ['Identifiants incorrects.']]], 422),
-        ]);
+        $this->fakeCredentials();
 
         $this->postJson('/api/v1/auth/login', ['login' => '06 333 33 33', 'password' => 'mot-de-passe-talenda'])
             ->assertOk()
@@ -185,6 +185,53 @@ class TalendaJunctionTest extends TestCase
         $this->postJson('/api/v1/auth/login', ['login' => '+242063333333', 'password' => 'x'])
             ->assertUnprocessable()
             ->assertJsonPath('errors.email.0', fn (string $message) => str_contains($message, 'ne répond pas'));
+    }
+
+    public function test_a_talenda_outage_does_not_lock_out_users_who_already_logged_in(): void
+    {
+        $this->fakeTalenda($this->snapshot());
+        app(SyncFromTalenda::class)->handle($this->tenant);
+        $this->fakeCredentials();
+
+        $this->postJson('/api/v1/auth/login', ['login' => '06 333 33 33', 'password' => 'mot-de-passe-talenda'])->assertOk();
+
+        $this->talendaDown = true;
+
+        $this->postJson('/api/v1/auth/login', ['login' => '06 333 33 33', 'password' => 'mot-de-passe-talenda'])->assertOk();
+        $this->postJson('/api/v1/auth/login', ['login' => '06 333 33 33', 'password' => 'mauvais'])->assertUnprocessable();
+
+        // Jamais connecté : Scolia n'a aucun mot de passe à comparer.
+        $this->postJson('/api/v1/auth/login', ['login' => '+242064444402', 'password' => 'mot-de-passe-talenda'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.email.0', fn (string $message) => str_contains($message, 'ne répond pas'));
+    }
+
+    public function test_an_unlinked_school_manages_everything_in_scolia_again(): void
+    {
+        $this->fakeTalenda($this->snapshot());
+        app(SyncFromTalenda::class)->handle($this->tenant);
+        $this->fakeCredentials();
+        $this->postJson('/api/v1/auth/login', ['login' => '06 333 33 33', 'password' => 'mot-de-passe-talenda'])->assertOk();
+
+        $passwords = app(UnlinkFromTalenda::class)->handle($this->tenant);
+
+        // Seul l'enseignant, jamais connecté, reçoit un mot de passe provisoire.
+        $this->assertSame(['Jean Okemba'], array_column($passwords, 'name'));
+        $this->assertFalse(TenantSetting::query()->sole()->isConnectedToTalenda());
+
+        Http::fake();
+        $this->postJson('/api/v1/auth/login', ['login' => '063333333', 'password' => 'mot-de-passe-talenda'])->assertOk();
+        $this->postJson('/api/v1/auth/login', ['login' => '+242064444402', 'password' => $passwords[0]['password']])->assertOk();
+        $this->artisan('scolia:talenda-sync')->assertSuccessful();
+        Http::assertNothingSent();
+
+        $this->actingAs($this->schoolAdmin());
+        $this->inTenant(function (): void {
+            $this->assertSame(2, Student::query()->count());
+            $this->assertTrue(StudentResource::canCreate());
+            Student::query()->where('first_name', 'Grâce')->sole()->update(['first_name' => 'Grâce-Divine']);
+            $this->assertTrue(Subject::query()->create(['name' => 'Latin'])->exists);
+        });
     }
 
     public function test_a_revoked_key_is_reported_and_changes_nothing(): void
@@ -229,6 +276,42 @@ class TalendaJunctionTest extends TestCase
         $this->assertSame(self::URL, $settings->talenda_url);
         $this->assertSame('tlnd_secret', $settings->talenda_token);
         $this->assertSame(2, Student::query()->count());
+    }
+
+    public function test_the_school_admin_unlinks_from_the_admin_panel_and_downloads_temporary_passwords(): void
+    {
+        $this->fakeTalenda($this->snapshot());
+        app(SyncFromTalenda::class)->handle($this->tenant);
+        $this->actingAs($this->schoolAdmin());
+        app(TenantContext::class)->set($this->tenant);
+
+        Livewire::test(TalendaConnection::class)
+            ->callAction('unlink')
+            ->assertFileDownloaded('mots-de-passe-provisoires.csv')
+            ->assertNotified('École déliée de Talenda');
+
+        $this->assertFalse(TenantSetting::query()->sole()->isConnectedToTalenda());
+    }
+
+    /**
+     * Talenda accepte « mot-de-passe-talenda » pour le parent et
+     * l'enseignant, sauf pendant une panne ($talendaDown).
+     */
+    private function fakeCredentials(): void
+    {
+        Http::fake([
+            self::URL.'/credentials/check' => function (Request $request) {
+                if ($this->talendaDown) {
+                    return Http::response('', 503);
+                }
+
+                $accounts = ['06 333 33 33' => 'acc-parent', '063333333' => 'acc-parent', '+242064444402' => 'acc-teacher'];
+
+                return $request['password'] === 'mot-de-passe-talenda' && isset($accounts[$request['login']])
+                    ? Http::response(['account_uuid' => $accounts[$request['login']], 'name' => 'Compte', 'phone' => null, 'email' => null, 'must_change_password' => false, 'roles' => []])
+                    : Http::response(['message' => 'Identifiants incorrects.', 'errors' => ['login' => ['Identifiants incorrects.']]], 422);
+            },
+        ]);
     }
 
     /**
